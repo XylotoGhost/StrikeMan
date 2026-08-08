@@ -23,6 +23,9 @@ var Presets = []Preset{
 		Name:        "Wingman 2v2",
 		Description: "Standard wingman rules, MR16, best on wingman maps.",
 		Commands:    []string{"game_type 0", "game_mode 2"},
+		PostCommands: []string{
+			"mp_limitteams 1", // re-lock team size after a 3v3 session
+		},
 	},
 	{
 		ID:          "wingman3v3",
@@ -34,6 +37,17 @@ var Presets = []Preset{
 			"mp_autoteambalance 0",
 		},
 	},
+}
+
+// Official maps with wingman spawn support; used to filter the map dropdown
+// while a wingman mode is active.
+var WingmanMaps = []string{
+	"de_brewery",
+	"de_dogtown",
+	"de_inferno",
+	"de_nuke",
+	"de_overpass",
+	"de_vertigo",
 }
 
 func presetByID(id string) *Preset {

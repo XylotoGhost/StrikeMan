@@ -4,6 +4,12 @@
 const $ = (id) => document.getElementById(id);
 let App; // set once the Wails runtime is ready
 
+// UI state
+let mapsData = { official: [], wingman: [], workshop: [] };
+let lastStatus = null;
+let userPickedMap = false; // user chose a map; stop following the current one
+let busyCount = 0;
+
 // ---------- helpers ----------
 
 function toast(msg, isError = false) {
@@ -11,7 +17,7 @@ function toast(msg, isError = false) {
   el.textContent = msg;
   el.className = "show" + (isError ? " error" : "");
   clearTimeout(el._timer);
-  el._timer = setTimeout(() => (el.className = ""), 3000);
+  el._timer = setTimeout(() => (el.className = ""), 3500);
 }
 
 function logLine(text) {
@@ -20,8 +26,10 @@ function logLine(text) {
   out.scrollTop = out.scrollHeight;
 }
 
-// Wrap a backend call: toast on error, optional success message.
+// Wrap a backend call: spinner while running, toast on error.
 async function call(fn, okMsg) {
+  busyCount++;
+  $("spinner").classList.remove("hidden");
   try {
     const result = await fn();
     if (okMsg) toast(okMsg);
@@ -29,19 +37,53 @@ async function call(fn, okMsg) {
   } catch (err) {
     toast(String(err), true);
     return undefined;
+  } finally {
+    busyCount--;
+    if (busyCount === 0) $("spinner").classList.add("hidden");
   }
 }
 
+// A player/match action: run it, then refresh the status right away so the
+// effect is visible without waiting for the next poll.
+async function action(fn, okMsg) {
+  const result = await call(fn, okMsg);
+  await refreshStatus();
+  return result;
+}
+
 // ---------- status polling ----------
+
+function isWingman(st) {
+  return st && st.gameType === 0 && st.gameMode === 2;
+}
 
 async function refreshStatus() {
   const st = await App.GetStatus().catch(() => null);
   const online = st && st.connected;
   $("status-dot").className = "dot " + (online ? "online" : "offline");
-  $("server-name").textContent = online ? st.hostname : "not connected";
-  $("server-map").textContent = online ? st.map : "";
-  $("server-players").textContent = online ? st.humans : "";
+  $("server-name").textContent = online ? st.hostname : (st && st.error ? st.error : "not connected");
+  $("server-map").textContent = online && st.map ? st.map : "–";
+  $("count-humans").textContent = online ? st.humans : 0;
+  $("count-bots").textContent = online ? st.bots : 0;
   renderPlayers(online ? st.players : []);
+  highlightPreset(online ? st : null);
+
+  const modeChanged = !lastStatus || !st || isWingman(lastStatus) !== isWingman(st);
+  const mapChanged = (lastStatus && lastStatus.map) !== (st && st.map);
+  lastStatus = st;
+  if (online && (modeChanged || mapChanged)) rebuildMapSelect();
+}
+
+function highlightPreset(st) {
+  document.querySelectorAll(".preset").forEach((btn) => {
+    let active = false;
+    if (st && st.gameType === 0) {
+      if (btn.dataset.id === "competitive") active = st.gameMode === 1;
+      if (btn.dataset.id === "wingman") active = st.gameMode === 2 && st.limitTeams !== 0;
+      if (btn.dataset.id === "wingman3v3") active = st.gameMode === 2 && st.limitTeams === 0;
+    }
+    btn.classList.toggle("active", active);
+  });
 }
 
 function renderPlayers(players) {
@@ -63,7 +105,7 @@ function renderPlayers(players) {
     const kick = document.createElement("button");
     kick.className = "kick";
     kick.textContent = "kick";
-    kick.onclick = () => call(() => App.KickPlayer(p.userId), `Kicked ${p.name}`);
+    kick.onclick = () => action(() => App.KickPlayer(p.userId), `Kicked ${p.name}`);
     li.append(name);
     if (p.bot) {
       const tag = document.createElement("span");
@@ -81,21 +123,54 @@ function renderPlayers(players) {
 async function refreshMaps() {
   const maps = await call(() => App.GetMaps());
   if (!maps) return;
+  mapsData = maps;
+  rebuildMapSelect();
+}
+
+// Rebuilds the dropdown: official maps (filtered to wingman maps while a
+// wingman mode is active) + workshop maps. Unless the user picked a map
+// themselves, the selection follows the server's current map.
+function rebuildMapSelect() {
   const sel = $("map-select");
-  sel.innerHTML = '<option value="">— current map —</option>';
+  const previous = sel.value;
+  const wingmanActive = isWingman(lastStatus);
+  const current = lastStatus ? lastStatus.map : "";
+  sel.innerHTML = "";
+
+  let official = mapsData.official;
+  if (wingmanActive) {
+    official = official.filter((m) => mapsData.wingman.includes(m));
+  }
+  $("map-filter-hint").textContent = wingmanActive
+    ? "Wingman is active — showing wingman maps only."
+    : "";
+
   const officials = document.createElement("optgroup");
   officials.label = "Official";
-  for (const name of maps.official) {
-    officials.append(new Option(name, name));
+  for (const name of official) {
+    officials.append(new Option(name === current ? name + "  ● current" : name, name));
   }
   sel.append(officials);
-  if (maps.workshop.length) {
+
+  if (mapsData.workshop.length) {
     const ws = document.createElement("optgroup");
     ws.label = "Workshop";
-    for (const m of maps.workshop) {
+    for (const m of mapsData.workshop) {
       ws.append(new Option(m.title, "ws:" + m.id));
     }
     sel.append(ws);
+  }
+
+  // Current map not in the list (e.g. a workshop map or filtered out).
+  if (current && !official.includes(current)) {
+    sel.append(new Option(current + "  ● current", current));
+  }
+
+  if (userPickedMap && [...sel.options].some((o) => o.value === previous)) {
+    sel.value = previous;
+  } else {
+    sel.value = current || (sel.options[0] ? sel.options[0].value : "");
+    userPickedMap = false;
   }
 }
 
@@ -112,10 +187,12 @@ async function loadPresets() {
   for (const p of presets) {
     const btn = document.createElement("button");
     btn.className = "preset";
+    btn.dataset.id = p.id;
     btn.innerHTML = `<b>${p.name}</b><small>${p.description}</small>`;
-    btn.onclick = () => {
+    btn.onclick = async () => {
       const m = selectedMap();
-      call(() => App.ApplyPreset(p.id, m.ref, m.workshop), `${p.name} — reloading map…`);
+      const ok = await call(() => App.ApplyPreset(p.id, m.ref, m.workshop), `${p.name} — reloading map…`);
+      if (ok !== undefined) userPickedMap = false;
     };
     row.append(btn);
   }
@@ -123,25 +200,82 @@ async function loadPresets() {
 
 // ---------- settings ----------
 
+let editCfg = { servers: [], default: "" };
+let editIdx = -1;
+
+function renderServerList() {
+  const list = $("srv-list");
+  list.innerHTML = "";
+  editCfg.servers.forEach((s, i) => {
+    const label = s.name + (s.name === editCfg.default ? "  ★" : "");
+    list.append(new Option(label, i));
+  });
+  list.value = editIdx;
+}
+
+function showServerFields() {
+  const s = editCfg.servers[editIdx];
+  const has = !!s;
+  for (const id of ["cfg-name", "cfg-host", "cfg-port", "cfg-password", "cfg-collection", "cfg-default"])
+    $(id).disabled = !has;
+  if (!has) return;
+  $("cfg-name").value = s.name || "";
+  $("cfg-host").value = s.host || "";
+  $("cfg-port").value = s.port || 27015;
+  $("cfg-password").value = s.password || "";
+  $("cfg-collection").value = s.collectionId || "";
+  $("cfg-default").checked = s.name === editCfg.default;
+}
+
 async function openSettings() {
   const cfg = await App.GetConfig();
-  $("cfg-host").value = cfg.host || "";
-  $("cfg-port").value = cfg.port || 27015;
-  $("cfg-password").value = cfg.password || "";
-  $("cfg-collection").value = cfg.collectionId || "";
+  editCfg = { servers: (cfg.servers || []).map((s) => ({ ...s })), default: cfg.default || "" };
+  if (!editCfg.servers.length) addServer();
+  editIdx = 0;
+  renderServerList();
+  showServerFields();
   $("settings-dialog").showModal();
 }
 
+function addServer() {
+  editCfg.servers.push({ name: "New server", host: "", port: 27015, password: "", collectionId: "" });
+  if (editCfg.servers.length === 1) editCfg.default = "New server";
+  editIdx = editCfg.servers.length - 1;
+  renderServerList();
+  showServerFields();
+}
+
+function removeServer() {
+  if (editIdx < 0) return;
+  const removed = editCfg.servers.splice(editIdx, 1)[0];
+  if (removed && removed.name === editCfg.default) {
+    editCfg.default = editCfg.servers[0] ? editCfg.servers[0].name : "";
+  }
+  editIdx = Math.min(editIdx, editCfg.servers.length - 1);
+  renderServerList();
+  showServerFields();
+}
+
 async function saveSettings() {
-  const cfg = {
-    host: $("cfg-host").value.trim(),
-    port: parseInt($("cfg-port").value, 10) || 27015,
-    password: $("cfg-password").value,
-    collectionId: $("cfg-collection").value.trim(),
-  };
-  await call(() => App.SaveConfig(cfg), "Settings saved");
+  const names = editCfg.servers.map((s) => s.name.trim());
+  if (names.some((n) => !n)) return toast("Every server needs a name", true);
+  if (new Set(names).size !== names.length) return toast("Server names must be unique", true);
+  if (!editCfg.default && names.length) editCfg.default = names[0];
+  await call(() => App.SaveConfig(editCfg), "Settings saved");
+  await refreshServerSelect();
+  userPickedMap = false;
   await refreshStatus();
   await refreshMaps();
+}
+
+async function refreshServerSelect() {
+  const cfg = await App.GetConfig();
+  const active = await App.GetActiveServer();
+  const sel = $("server-select");
+  sel.innerHTML = "";
+  for (const s of cfg.servers || []) sel.append(new Option(s.name, s.name));
+  sel.value = active;
+  sel.classList.toggle("hidden", (cfg.servers || []).length < 2);
 }
 
 // ---------- wiring ----------
@@ -149,28 +283,63 @@ async function saveSettings() {
 function wireEvents() {
   $("btn-settings").onclick = openSettings;
   $("btn-save-settings").onclick = saveSettings;
+  $("btn-srv-add").onclick = addServer;
+  $("btn-srv-remove").onclick = removeServer;
 
-  $("btn-changemap").onclick = () => {
+  $("srv-list").onchange = () => {
+    editIdx = parseInt($("srv-list").value, 10);
+    showServerFields();
+  };
+  $("cfg-name").oninput = () => {
+    const s = editCfg.servers[editIdx];
+    if (!s) return;
+    if (s.name === editCfg.default) editCfg.default = $("cfg-name").value;
+    s.name = $("cfg-name").value;
+    renderServerList();
+  };
+  $("cfg-host").oninput = () => (editCfg.servers[editIdx].host = $("cfg-host").value.trim());
+  $("cfg-port").oninput = () => (editCfg.servers[editIdx].port = parseInt($("cfg-port").value, 10) || 27015);
+  $("cfg-password").oninput = () => (editCfg.servers[editIdx].password = $("cfg-password").value);
+  $("cfg-collection").oninput = () => (editCfg.servers[editIdx].collectionId = $("cfg-collection").value.trim());
+  $("cfg-default").onchange = () => {
+    if ($("cfg-default").checked) editCfg.default = editCfg.servers[editIdx].name;
+    else if (editCfg.default === editCfg.servers[editIdx].name) editCfg.default = "";
+    renderServerList();
+  };
+
+  $("server-select").onchange = async () => {
+    await call(() => App.SelectServer($("server-select").value));
+    userPickedMap = false;
+    lastStatus = null;
+    await refreshStatus();
+    await refreshMaps();
+  };
+
+  $("map-select").onchange = () => (userPickedMap = true);
+  $("btn-changemap").onclick = async () => {
     const m = selectedMap();
     if (!m.ref) return toast("Pick a map first", true);
-    call(() => App.ChangeMap(m.ref, m.workshop), "Changing map…");
+    const ok = await call(() => App.ChangeMap(m.ref, m.workshop), "Changing map…");
+    if (ok !== undefined) userPickedMap = false;
   };
   $("btn-refreshmaps").onclick = refreshMaps;
 
   $("btn-warmup-start").onclick = () =>
-    call(() => App.StartWarmup(parseInt($("warmup-seconds").value, 10) || 120), "Warmup started");
-  $("btn-warmup-end").onclick = () => call(() => App.EndWarmup(), "Warmup ended");
-  $("btn-pause").onclick = () => call(() => App.Pause(), "Match pauses at end of round/freezetime");
-  $("btn-unpause").onclick = () => call(() => App.Unpause(), "Match unpaused");
-  $("btn-restart").onclick = () => call(() => App.RestartRound(), "Round restarted");
+    action(() => App.StartWarmup(parseInt($("warmup-seconds").value, 10) || 120), "Warmup started");
+  $("btn-warmup-end").onclick = () => action(() => App.EndWarmup(), "Warmup ended");
+  $("btn-pause").onclick = () => action(() => App.Pause(), "Match pauses at end of round/freezetime");
+  $("btn-unpause").onclick = () => action(() => App.Unpause(), "Match unpaused");
+  $("btn-restart").onclick = () => action(() => App.RestartRound(), "Round restarted");
 
-  $("btn-swap").onclick = () => call(() => App.SwapTeams(), "Teams swapped");
-  $("btn-scramble").onclick = () => call(() => App.ScrambleTeams(), "Teams scrambled");
+  $("btn-swap").onclick = () => action(() => App.SwapTeams(), "Teams swapped");
+  $("btn-scramble").onclick = () => action(() => App.ScrambleTeams(), "Teams scrambled");
   $("btn-teamnames").onclick = () =>
     call(() => App.SetTeamNames($("teamname-ct").value, $("teamname-t").value), "Team names set");
-  $("btn-bot-ct").onclick = () => call(() => App.AddBot("ct"));
-  $("btn-bot-t").onclick = () => call(() => App.AddBot("t"));
-  $("btn-bot-kick").onclick = () => call(() => App.KickBots(), "Bots kicked");
+  $("btn-bot-ct").onclick = () => action(() => App.AddBot("ct"));
+  $("btn-bot-t").onclick = () => action(() => App.AddBot("t"));
+  $("btn-bot-kick").onclick = () => action(() => App.KickBots(), "Bots kicked");
+
+  $("btn-clearlog").onclick = () => ($("console-out").textContent = "");
 
   $("console-in").addEventListener("keydown", async (e) => {
     if (e.key !== "Enter") return;
@@ -193,9 +362,10 @@ async function init() {
   App = window.go.main.App;
   wireEvents();
   await loadPresets();
+  await refreshServerSelect();
 
   const cfg = await App.GetConfig();
-  if (!cfg.password) {
+  if (!(cfg.servers || []).length) {
     openSettings();
   } else {
     await refreshStatus();

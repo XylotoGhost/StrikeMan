@@ -18,6 +18,10 @@ export function EndWarmup() {
   return window['go']['main']['App']['EndWarmup']();
 }
 
+export function GetActiveServer() {
+  return window['go']['main']['App']['GetActiveServer']();
+}
+
 export function GetConfig() {
   return window['go']['main']['App']['GetConfig']();
 }
@@ -60,6 +64,10 @@ export function SaveConfig(arg1) {
 
 export function ScrambleTeams() {
   return window['go']['main']['App']['ScrambleTeams']();
+}
+
+export function SelectServer(arg1) {
+  return window['go']['main']['App']['SelectServer'](arg1);
 }
 
 export function SetTeamNames(arg1, arg2) {

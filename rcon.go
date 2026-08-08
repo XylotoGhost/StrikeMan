@@ -60,6 +60,10 @@ func (r *Rcon) connectLocked() error {
 		id, typ, _, err := readPacket(conn)
 		if err != nil {
 			conn.Close()
+			if errors.Is(err, io.EOF) {
+				// CS2 drops the connection instead of answering id -1.
+				return errors.New("server rejected the RCON password — did it change after a server restart? Update it in the settings")
+			}
 			return err
 		}
 		if typ != packetAuthResponse {

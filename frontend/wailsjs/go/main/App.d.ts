@@ -10,6 +10,8 @@ export function ChangeMap(arg1:string,arg2:boolean):Promise<void>;
 
 export function EndWarmup():Promise<void>;
 
+export function GetActiveServer():Promise<string>;
+
 export function GetConfig():Promise<main.Config>;
 
 export function GetMaps():Promise<main.MapList>;
@@ -31,6 +33,8 @@ export function RunCommand(arg1:string):Promise<string>;
 export function SaveConfig(arg1:main.Config):Promise<void>;
 
 export function ScrambleTeams():Promise<void>;
+
+export function SelectServer(arg1:string):Promise<void>;
 
 export function SetTeamNames(arg1:string,arg2:string):Promise<void>;
 

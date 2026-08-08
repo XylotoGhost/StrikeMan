@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -15,9 +16,11 @@ import (
 )
 
 type App struct {
-	ctx    context.Context
-	config Config
-	rcon   *Rcon
+	ctx     context.Context
+	config  Config
+	active  string // name of the currently selected server
+	rcon    *Rcon
+	canBatch *bool // whether the server accepts semicolon-batched commands
 }
 
 func NewApp() *App {
@@ -27,7 +30,22 @@ func NewApp() *App {
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 	a.config = LoadConfig()
-	a.rcon = NewRcon(a.config.Host, a.config.Port, a.config.Password)
+	a.active = a.config.Default
+	if a.config.serverByName(a.active) == nil && len(a.config.Servers) > 0 {
+		a.active = a.config.Servers[0].Name
+	}
+	a.connectActive()
+}
+
+func (a *App) connectActive() {
+	if a.rcon != nil {
+		a.rcon.Close()
+		a.rcon = nil
+	}
+	a.canBatch = nil
+	if s := a.config.serverByName(a.active); s != nil {
+		a.rcon = NewRcon(s.Host, s.Port, s.Password)
+	}
 }
 
 // log sends a line to the frontend console card.
@@ -35,7 +53,14 @@ func (a *App) log(format string, args ...any) {
 	runtime.EventsEmit(a.ctx, "log", fmt.Sprintf(format, args...))
 }
 
-// ---- Config ----
+func (a *App) exec(cmd string) (string, error) {
+	if a.rcon == nil {
+		return "", fmt.Errorf("no server configured")
+	}
+	return a.rcon.Exec(cmd)
+}
+
+// ---- Config & server selection ----
 
 func (a *App) GetConfig() Config {
 	return a.config
@@ -43,15 +68,37 @@ func (a *App) GetConfig() Config {
 
 func (a *App) SaveConfig(cfg Config) error {
 	a.config = cfg
-	a.rcon.Close()
-	a.rcon = NewRcon(cfg.Host, cfg.Port, cfg.Password)
-	return cfg.Save()
+	if err := cfg.Save(); err != nil {
+		return err
+	}
+	if a.config.serverByName(a.active) == nil {
+		a.active = a.config.Default
+		if a.config.serverByName(a.active) == nil && len(a.config.Servers) > 0 {
+			a.active = a.config.Servers[0].Name
+		}
+	}
+	a.connectActive()
+	return nil
+}
+
+func (a *App) GetActiveServer() string {
+	return a.active
+}
+
+func (a *App) SelectServer(name string) error {
+	if a.config.serverByName(name) == nil {
+		return fmt.Errorf("unknown server %q", name)
+	}
+	a.active = name
+	a.connectActive()
+	a.log("Switched to server: %s", name)
+	return nil
 }
 
 // ---- Raw console ----
 
 func (a *App) RunCommand(cmd string) (string, error) {
-	return a.rcon.Exec(cmd)
+	return a.exec(cmd)
 }
 
 // ---- Status ----
@@ -64,27 +111,55 @@ type Player struct {
 }
 
 type Status struct {
-	Connected bool     `json:"connected"`
-	Error     string   `json:"error"`
-	Hostname  string   `json:"hostname"`
-	Map       string   `json:"map"`
-	Humans    string   `json:"humans"`
-	Players   []Player `json:"players"`
+	Connected  bool     `json:"connected"`
+	Error      string   `json:"error"`
+	Hostname   string   `json:"hostname"`
+	Map        string   `json:"map"`
+	Humans     int      `json:"humans"`
+	Bots       int      `json:"bots"`
+	GameType   int      `json:"gameType"`
+	GameMode   int      `json:"gameMode"`
+	LimitTeams int      `json:"limitTeams"`
+	Players    []Player `json:"players"`
 }
 
 var (
 	reHostname   = regexp.MustCompile(`(?m)^hostname\s*:\s*(.+)$`)
 	reMap        = regexp.MustCompile(`loaded spawngroup\(\s*1\)\s*:\s*SV:\s*\[1:\s*([^|\]]+?)\s*\|`)
 	rePlayerLine = regexp.MustCompile(`^\s*(\d+)\s+(\S+)\s+(\d+)\s+\d+\s+(\w+)\s+\d+\s*(\S*)\s+'(.+)'\s*$`)
-	rePlayerCnt  = regexp.MustCompile(`(?m)^players\s*:\s*(.+)$`)
+	rePlayerCnt  = regexp.MustCompile(`(?m)^players\s*:\s*(\d+) humans, (\d+) bots`)
+	reGameType   = regexp.MustCompile(`game_type = (\d+)`)
+	reGameMode   = regexp.MustCompile(`game_mode = (\d+)`)
+	reLimitTeams = regexp.MustCompile(`mp_limitteams = (\d+)`)
 )
 
+const modeConvars = "game_type; game_mode; mp_limitteams"
+
+// GetStatus polls `status` plus the mode convars. Batching them into one
+// round trip is attempted once; if the server doesn't split on semicolons,
+// the convars are queried separately from then on.
 func (a *App) GetStatus() Status {
-	out, err := a.rcon.Exec("status")
-	if err != nil {
-		return Status{Error: err.Error()}
+	st := Status{GameType: -1, GameMode: -1, LimitTeams: -1, Players: []Player{}}
+	cmd := "status"
+	if a.canBatch == nil || *a.canBatch {
+		cmd = "status; " + modeConvars
 	}
-	st := Status{Connected: true, Players: []Player{}}
+	out, err := a.exec(cmd)
+	if err != nil {
+		st.Error = err.Error()
+		return st
+	}
+	if a.canBatch == nil {
+		ok := reGameMode.MatchString(out)
+		a.canBatch = &ok
+	}
+	if !*a.canBatch {
+		if extra, err := a.exec(modeConvars); err == nil {
+			out += "\n" + extra
+		}
+	}
+
+	st.Connected = true
 	if m := reHostname.FindStringSubmatch(out); m != nil {
 		st.Hostname = strings.TrimSpace(m[1])
 	}
@@ -92,7 +167,17 @@ func (a *App) GetStatus() Status {
 		st.Map = strings.TrimSpace(m[1])
 	}
 	if m := rePlayerCnt.FindStringSubmatch(out); m != nil {
-		st.Humans = strings.TrimSpace(m[1])
+		st.Humans, _ = strconv.Atoi(m[1])
+		st.Bots, _ = strconv.Atoi(m[2])
+	}
+	if m := reGameType.FindStringSubmatch(out); m != nil {
+		st.GameType, _ = strconv.Atoi(m[1])
+	}
+	if m := reGameMode.FindStringSubmatch(out); m != nil {
+		st.GameMode, _ = strconv.Atoi(m[1])
+	}
+	if m := reLimitTeams.FindStringSubmatch(out); m != nil {
+		st.LimitTeams, _ = strconv.Atoi(m[1])
 	}
 	for _, line := range strings.Split(out, "\n") {
 		m := rePlayerLine.FindStringSubmatch(line)
@@ -113,6 +198,7 @@ func (a *App) GetStatus() Status {
 
 type MapList struct {
 	Official []string      `json:"official"`
+	Wingman  []string      `json:"wingman"`
 	Workshop []WorkshopMap `json:"workshop"`
 }
 
@@ -121,8 +207,8 @@ var reMapName = regexp.MustCompile(`^(ar|cs|de)_[a-z0-9_]+$`)
 // GetMaps asks the server which official maps it has and pairs that with the
 // configured workshop collection.
 func (a *App) GetMaps() (MapList, error) {
-	list := MapList{Official: []string{}, Workshop: []WorkshopMap{}}
-	out, err := a.rcon.Exec("maps *")
+	list := MapList{Official: []string{}, Wingman: WingmanMaps, Workshop: []WorkshopMap{}}
+	out, err := a.exec("maps *")
 	if err != nil {
 		return list, err
 	}
@@ -134,9 +220,16 @@ func (a *App) GetMaps() (MapList, error) {
 	}
 	sort.Strings(list.Official)
 
-	if ws, err := FetchWorkshopMaps(a.config.CollectionID); err != nil {
+	collectionID := ""
+	if s := a.config.serverByName(a.active); s != nil {
+		collectionID = s.CollectionID
+	}
+	if ws, err := FetchWorkshopMaps(collectionID); err != nil {
 		a.log("Workshop collection: %v", err)
 	} else {
+		sort.Slice(ws, func(i, j int) bool {
+			return strings.ToLower(ws[i].Title) < strings.ToLower(ws[j].Title)
+		})
 		list.Workshop = ws
 	}
 	return list, nil
@@ -149,7 +242,7 @@ func (a *App) ChangeMap(ref string, workshop bool) error {
 		cmd = "host_workshop_map " + ref
 	}
 	a.log("> %s", cmd)
-	_, err := a.rcon.Exec(cmd)
+	_, err := a.exec(cmd)
 	return err
 }
 
@@ -175,7 +268,7 @@ func (a *App) ApplyPreset(id, mapRef string, workshop bool) error {
 	}
 	a.log("Applying preset: %s on %s", p.Name, mapRef)
 	for _, cmd := range p.Commands {
-		if _, err := a.rcon.Exec(cmd); err != nil {
+		if _, err := a.exec(cmd); err != nil {
 			return err
 		}
 	}
@@ -193,9 +286,9 @@ func (a *App) ApplyPreset(id, mapRef string, workshop bool) error {
 func (a *App) runAfterMapLoad(p *Preset) {
 	time.Sleep(5 * time.Second)
 	for i := 0; i < 12; i++ {
-		if _, err := a.rcon.Exec("echo strikeman-ready"); err == nil {
+		if _, err := a.exec("echo strikeman-ready"); err == nil {
 			for _, cmd := range p.PostCommands {
-				a.rcon.Exec(cmd)
+				a.exec(cmd)
 				a.log("> %s", cmd)
 			}
 			a.log("Preset %s fully applied.", p.Name)
@@ -212,9 +305,9 @@ func (a *App) StartWarmup(seconds int) error {
 	return a.execAll(fmt.Sprintf("mp_warmuptime %d", seconds), "mp_warmup_start")
 }
 
-func (a *App) EndWarmup() error   { return a.execAll("mp_warmup_end") }
-func (a *App) Pause() error       { return a.execAll("mp_pause_match") }
-func (a *App) Unpause() error     { return a.execAll("mp_unpause_match") }
+func (a *App) EndWarmup() error    { return a.execAll("mp_warmup_end") }
+func (a *App) Pause() error        { return a.execAll("mp_pause_match") }
+func (a *App) Unpause() error      { return a.execAll("mp_unpause_match") }
 func (a *App) RestartRound() error { return a.execAll("mp_restartgame 1") }
 
 // ---- Teams & players ----
@@ -237,7 +330,7 @@ func (a *App) KickBots() error { return a.execAll("bot_kick") }
 func (a *App) execAll(cmds ...string) error {
 	for _, cmd := range cmds {
 		a.log("> %s", cmd)
-		if _, err := a.rcon.Exec(cmd); err != nil {
+		if _, err := a.exec(cmd); err != nil {
 			return err
 		}
 	}
