@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StrikeMan</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <span class="logo">⌖</span>
+      <h1>StrikeMan</h1>
+    </div>
+    <div class="server-info">
+      <span id="status-dot" class="dot offline"></span>
+      <span id="server-name">not connected</span>
+      <span id="server-map" class="pill"></span>
+      <span id="server-players" class="pill"></span>
+    </div>
+    <button id="btn-settings" class="ghost" title="Settings">⚙</button>
+  </header>
+
+  <main>
+    <section class="card" id="card-presets">
+      <h2>Presets</h2>
+      <div id="preset-buttons" class="preset-row"></div>
+      <p class="hint">Applies the mode and reloads the selected (or current) map.</p>
+    </section>
+
+    <section class="card" id="card-maps">
+      <h2>Map</h2>
+      <div class="row">
+        <select id="map-select">
+          <option value="">— current map —</option>
+        </select>
+        <button id="btn-changemap">Change map</button>
+        <button id="btn-refreshmaps" class="ghost" title="Reload map list">⟳</button>
+      </div>
+    </section>
+
+    <section class="card" id="card-match">
+      <h2>Match</h2>
+      <div class="row">
+        <label for="warmup-seconds">Warmup</label>
+        <input id="warmup-seconds" type="number" value="120" min="5" max="3600" />
+        <span class="unit">s</span>
+        <button id="btn-warmup-start">Start</button>
+        <button id="btn-warmup-end">End</button>
+      </div>
+      <div class="row">
+        <button id="btn-pause">⏸ Pause</button>
+        <button id="btn-unpause">▶ Unpause</button>
+        <button id="btn-restart">↻ Restart round</button>
+      </div>
+    </section>
+
+    <section class="card" id="card-teams">
+      <h2>Teams</h2>
+      <div class="row">
+        <button id="btn-swap">⇄ Swap sides</button>
+        <button id="btn-scramble">🎲 Scramble</button>
+      </div>
+      <div class="row">
+        <input id="teamname-ct" type="text" placeholder="CT team name" />
+        <input id="teamname-t" type="text" placeholder="T team name" />
+        <button id="btn-teamnames">Set names</button>
+      </div>
+      <div class="row">
+        <button id="btn-bot-ct" class="ghost">+ Bot CT</button>
+        <button id="btn-bot-t" class="ghost">+ Bot T</button>
+        <button id="btn-bot-kick" class="ghost">Kick bots</button>
+      </div>
+    </section>
+
+    <section class="card" id="card-players">
+      <h2>Players <span id="player-count"></span></h2>
+      <ul id="player-list"><li class="empty">nobody on the server</li></ul>
+    </section>
+
+    <section class="card wide" id="card-console">
+      <h2>Console</h2>
+      <pre id="console-out"></pre>
+      <div class="row">
+        <input id="console-in" type="text" placeholder="rcon command… (Enter to send)" spellcheck="false" />
+      </div>
+    </section>
+  </main>
+
+  <dialog id="settings-dialog">
+    <form method="dialog">
+      <h2>Settings</h2>
+      <label>Server host
+        <input id="cfg-host" type="text" placeholder="192.168.178.66" />
+      </label>
+      <label>RCON port
+        <input id="cfg-port" type="number" placeholder="27016" />
+      </label>
+      <label>RCON password
+        <input id="cfg-password" type="password" />
+      </label>
+      <label>Workshop collection ID
+        <input id="cfg-collection" type="text" placeholder="e.g. 3070284539" />
+      </label>
+      <div class="row right">
+        <button value="cancel" class="ghost">Cancel</button>
+        <button id="btn-save-settings" value="save">Save &amp; connect</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast"></div>
+  <script src="app.js"></script>
+</body>
+</html>
