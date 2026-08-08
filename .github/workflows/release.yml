@@ -17,7 +17,7 @@ jobs:
             package: Compress-Archive -Path build/bin/StrikeMan.exe -DestinationPath StrikeMan-windows.zip
             artifact: StrikeMan-windows.zip
           - os: macos-latest
-            package: ditto -c -k --keep-parent build/bin/StrikeMan.app StrikeMan-macos.zip
+            package: ditto -c -k --keepParent build/bin/StrikeMan.app StrikeMan-macos.zip
             artifact: StrikeMan-macos.zip
           - os: ubuntu-latest
             package: tar -czf StrikeMan-linux.tar.gz -C build/bin StrikeMan
