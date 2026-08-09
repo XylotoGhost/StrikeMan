@@ -359,7 +359,10 @@ func (a *App) SetTeamNames(ct, t string) error {
 func (a *App) KickPlayer(userID string) error { return a.execAll("kickid " + userID) }
 
 func (a *App) AddBot(team string) error { // team: "ct" or "t"
-	return a.execAll("bot_add_" + team)
+	// In the gamemode cfgs' quota modes ("competitive"/"fill") the engine
+	// manages the bot count itself and kicks manually added bots again.
+	// "normal" hands control back to us.
+	return a.execAll("bot_quota_mode normal", "bot_join_after_player 0", "bot_add_"+team)
 }
 
 func (a *App) KickBots() error { return a.execAll("bot_kick") }
