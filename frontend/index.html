@@ -9,153 +9,161 @@
 <body>
   <header>
     <div class="brand">
-      <span class="logo">⌖</span>
+      <span class="logo" aria-hidden="true">⌖</span>
       <h1>StrikeMan</h1>
     </div>
     <div class="server-info">
-      <select id="server-select" class="hidden" title="Switch server"></select>
-      <span id="status-dot" class="dot offline"></span>
-      <span id="server-name">not connected</span>
-      <span class="chip" title="Current map">
-        <svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M12 2C8.1 2 5 5.1 5 9c0 5.2 7 13 7 13s7-7.8 7-13c0-3.9-3.1-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
+      <select id="server-select" class="hidden" data-i18n-title="app.switchServer" data-i18n-aria="app.switchServer"></select>
+      <span id="status-dot" class="dot offline" aria-hidden="true"></span>
+      <span id="server-name">–</span>
+      <span class="chip" data-i18n-title="app.currentMap">
+        <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M12 2C8.1 2 5 5.1 5 9c0 5.2 7 13 7 13s7-7.8 7-13c0-3.9-3.1-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
         <span id="server-map">–</span>
       </span>
-      <span class="chip" title="Human players">
-        <svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5zm0 2c-3.3 0-10 1.7-10 5v3h20v-3c0-3.3-6.7-5-10-5z"/></svg>
+      <span class="chip" data-i18n-title="app.humans">
+        <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5zm0 2c-3.3 0-10 1.7-10 5v3h20v-3c0-3.3-6.7-5-10-5z"/></svg>
         <span id="count-humans">0</span>
       </span>
-      <span class="chip" title="Bots">
-        <svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M12 2a2 2 0 0 1 2 2c0 .7-.4 1.4-1 1.7V7h4a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-7a3 3 0 0 1 3-3h4V5.7c-.6-.3-1-1-1-1.7a2 2 0 0 1 2-2zM7.5 11a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm9 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zM8 16v2h8v-2H8z"/></svg>
+      <span class="chip" data-i18n-title="app.bots">
+        <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M12 2a2 2 0 0 1 2 2c0 .7-.4 1.4-1 1.7V7h4a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-7a3 3 0 0 1 3-3h4V5.7c-.6-.3-1-1-1-1.7a2 2 0 0 1 2-2zM7.5 11a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm9 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zM8 16v2h8v-2H8z"/></svg>
         <span id="count-bots">0</span>
       </span>
-      <span id="spinner" class="spinner hidden" title="Command running…"></span>
+      <span id="spinner" class="spinner hidden" data-i18n-title="app.running" role="status"></span>
     </div>
-    <button id="btn-settings" class="ghost" title="Settings">⚙</button>
+    <button id="btn-settings" class="ghost" data-i18n-title="app.settings" data-i18n-aria="app.settings">⚙</button>
   </header>
 
   <main>
     <section class="card wide" id="card-game">
-      <h2>Game</h2>
+      <h2 data-i18n="game.title">Game</h2>
       <p class="now" id="now-line">–</p>
       <div id="mode-buttons" class="preset-row"></div>
       <div class="row">
-        <select id="map-select"></select>
-        <button id="btn-apply">▶ Apply mode &amp; load map</button>
-        <button id="btn-changemap" class="ghost" title="Load the map without changing the mode">Change map only</button>
-        <button id="btn-refreshmaps" class="ghost" title="Reload map list">⟳</button>
+        <select id="map-select" data-i18n-aria="game.title"></select>
+        <button id="btn-apply" data-i18n="game.apply">Apply</button>
+        <button id="btn-changemap" class="ghost" data-i18n="game.changeMapOnly" data-i18n-title="game.changeMapOnlyHint">Change map only</button>
+        <button id="btn-refreshmaps" class="ghost" data-i18n-title="game.refreshMaps" data-i18n-aria="game.refreshMaps">⟳</button>
       </div>
       <p class="hint" id="map-filter-hint"></p>
     </section>
 
     <section class="card" id="card-match">
-      <h2>Match</h2>
+      <h2 data-i18n="match.title">Match</h2>
       <div class="row">
-        <label for="warmup-seconds">Warmup</label>
+        <label for="warmup-seconds" data-i18n="match.warmup">Warmup</label>
         <input id="warmup-seconds" type="number" value="120" min="5" max="3600" />
         <span class="unit">s</span>
-        <button id="btn-warmup">▶ Start warmup</button>
+        <button id="btn-warmup">Start warmup</button>
       </div>
       <div class="row">
-        <button id="btn-pause">⏸ Pause match</button>
-        <button id="btn-restart" class="danger">↻ Restart match</button>
+        <button id="btn-pause">Pause match</button>
+        <button id="btn-restart" class="danger" data-i18n="match.restart">Restart match</button>
       </div>
       <div class="row switches" id="switches"></div>
       <div class="row">
-        <input id="announce-in" type="text" placeholder="Announce to all players…" />
-        <button id="btn-announce" class="ghost">Say</button>
+        <input id="announce-in" type="text" data-i18n-placeholder="match.announcePlaceholder" />
+        <button id="btn-announce" class="ghost" data-i18n="match.say">Say</button>
       </div>
     </section>
 
     <section class="card" id="card-teams">
-      <h2>Teams</h2>
+      <h2 data-i18n="teams.title">Teams</h2>
       <div class="row">
-        <button id="btn-swap">⇄ Swap sides</button>
-        <button id="btn-scramble">🎲 Scramble</button>
+        <button id="btn-swap" data-i18n="teams.swap">Swap sides</button>
+        <button id="btn-scramble" data-i18n="teams.scramble">Scramble</button>
       </div>
       <div class="row">
-        <input id="teamname-ct" type="text" placeholder="CT team name" />
-        <input id="teamname-t" type="text" placeholder="T team name" />
-        <button id="btn-teamnames">Set names</button>
+        <input id="teamname-ct" type="text" data-i18n-placeholder="teams.ctName" />
+        <input id="teamname-t" type="text" data-i18n-placeholder="teams.tName" />
+        <button id="btn-teamnames" data-i18n="teams.setNames">Set names</button>
       </div>
       <div class="row">
-        <button id="btn-bot-ct" class="ghost">+ Bot CT</button>
-        <button id="btn-bot-t" class="ghost">+ Bot T</button>
-        <button id="btn-bot-kick" class="ghost">Kick bots</button>
+        <button id="btn-bot-ct" class="ghost" data-i18n="teams.addBotCT">+ Bot CT</button>
+        <button id="btn-bot-t" class="ghost" data-i18n="teams.addBotT">+ Bot T</button>
+        <button id="btn-bot-kick" class="ghost" data-i18n="teams.kickBots">Kick bots</button>
       </div>
     </section>
 
     <section class="card" id="card-players">
-      <h2>Players <span id="player-count"></span></h2>
-      <ul id="player-list"><li class="empty">nobody on the server</li></ul>
+      <h2><span data-i18n="players.title">Players</span> <span id="player-count"></span></h2>
+      <ul id="player-list"></ul>
     </section>
 
     <section class="card" id="card-server">
-      <h2>Server <button id="btn-refreshinfo" class="ghost small">Check</button></h2>
+      <h2>
+        <span data-i18n="server.title">Server</span>
+        <button id="btn-refreshinfo" class="ghost small" data-i18n="server.check">Check</button>
+      </h2>
       <ul class="info-list">
-        <li><span>Version</span><b id="info-version">–</b></li>
-        <li><span>Updates</span><b id="info-update">not checked</b></li>
-        <li><span>Uptime</span><b id="info-uptime">–</b></li>
+        <li><span data-i18n="server.version">Version</span><b id="info-version">–</b></li>
+        <li><span data-i18n="server.updates">Updates</span><b id="info-update" data-i18n="server.notChecked">not checked</b></li>
+        <li><span data-i18n="server.uptime">Uptime</span><b id="info-uptime">–</b></li>
       </ul>
     </section>
 
     <section class="card wide" id="card-console">
-      <h2>Console <button id="btn-clearlog" class="ghost small">Clear</button></h2>
-      <pre id="console-out"></pre>
+      <h2>
+        <span data-i18n="console.title">Console</span>
+        <button id="btn-clearlog" class="ghost small" data-i18n="console.clear">Clear</button>
+      </h2>
+      <pre id="console-out" role="log"></pre>
       <div class="row">
-        <input id="console-in" type="text" placeholder="rcon command… (Enter to send)" spellcheck="false" />
+        <input id="console-in" type="text" spellcheck="false" data-i18n-placeholder="console.placeholder" />
       </div>
     </section>
   </main>
 
   <dialog id="settings-dialog">
     <form method="dialog">
-      <h2>Settings</h2>
+      <h2 data-i18n="settings.title">Settings</h2>
       <div class="row">
         <select id="srv-list"></select>
-        <button type="button" id="btn-srv-add" class="ghost">+ Add</button>
-        <button type="button" id="btn-srv-remove" class="ghost">Remove</button>
+        <button type="button" id="btn-srv-add" class="ghost" data-i18n="settings.add">Add</button>
+        <button type="button" id="btn-srv-remove" class="ghost" data-i18n="settings.remove">Remove</button>
       </div>
-      <label>Name
-        <input id="cfg-name" type="text" placeholder="My server" />
+      <label><span data-i18n="settings.name">Name</span>
+        <input id="cfg-name" type="text" data-i18n-placeholder="settings.namePlaceholder" />
       </label>
-      <label>Server host
+      <label><span data-i18n="settings.host">Server host</span>
         <input id="cfg-host" type="text" placeholder="192.168.178.66" />
       </label>
-      <label>RCON port
+      <label><span data-i18n="settings.port">RCON port</span>
         <input id="cfg-port" type="number" placeholder="27016" />
       </label>
-      <label>RCON password
+      <label><span data-i18n="settings.password">RCON password</span>
         <input id="cfg-password" type="password" />
       </label>
-      <label>Workshop collection ID
-        <input id="cfg-collection" type="text" placeholder="e.g. 3070284539" />
+      <label><span data-i18n="settings.collection">Workshop collection ID</span>
+        <input id="cfg-collection" type="text" data-i18n-placeholder="settings.collectionPlaceholder" />
       </label>
       <label class="check">
-        <input id="cfg-default" type="checkbox" /> Use as default server
+        <input id="cfg-default" type="checkbox" /> <span data-i18n="settings.default">Use as default server</span>
       </label>
       <label class="check">
-        <input id="cfg-sticky" type="checkbox" /> Keep admin toggles across presets and map changes
+        <input id="cfg-sticky" type="checkbox" /> <span data-i18n="settings.sticky">Keep admin toggles</span>
       </label>
-      <p class="hint">Loading a map re-runs the game mode config on the server, which turns
-        auto-kick back on. With this enabled StrikeMan re-applies your choice afterwards.</p>
-      <p class="hint">Passwords are stored in your OS credential store, not in the config file.</p>
+      <p class="hint" data-i18n="settings.stickyHint"></p>
+      <label><span data-i18n="settings.language">Language</span>
+        <select id="cfg-language"></select>
+      </label>
+      <p class="hint" data-i18n="settings.passwordHint"></p>
       <div class="row right">
-        <button value="cancel" class="ghost">Cancel</button>
-        <button id="btn-save-settings" value="save">Save &amp; connect</button>
+        <button value="cancel" class="ghost" data-i18n="settings.cancel">Cancel</button>
+        <button id="btn-save-settings" value="save" data-i18n="settings.save">Save</button>
       </div>
     </form>
   </dialog>
 
   <dialog id="confirm-dialog">
-    <h2 id="confirm-title">Are you sure?</h2>
+    <h2 id="confirm-title">–</h2>
     <p id="confirm-text"></p>
     <div class="row right">
-      <button id="confirm-no" class="ghost">Cancel</button>
-      <button id="confirm-yes" class="danger">Do it</button>
+      <button id="confirm-no" class="ghost" data-i18n="confirm.cancel">Cancel</button>
+      <button id="confirm-yes" class="danger" data-i18n="confirm.yes">Do it</button>
     </div>
   </dialog>
 
-  <div id="toast"></div>
-  <script src="app.js"></script>
+  <div id="toast" role="alert"></div>
+  <script type="module" src="app.js"></script>
 </body>
 </html>

@@ -11,7 +11,12 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 )
+
+// Steam is not always quick, and the default client waits forever — which
+// would hang the map list or the update check with no way out.
+var steamClient = &http.Client{Timeout: 10 * time.Second}
 
 type WorkshopMap struct {
 	ID    string   `json:"id"`
@@ -31,7 +36,7 @@ func (m WorkshopMap) HasTag(tag string) bool {
 // CheckServerUpToDate asks Steam whether a CS2 server build is current.
 // The build number is the one `status` reports as "1.41.7.4/14174".
 func CheckServerUpToDate(build int) (upToDate bool, latest int, note string, err error) {
-	resp, err := http.Get(fmt.Sprintf(
+	resp, err := steamClient.Get(fmt.Sprintf(
 		"https://api.steampowered.com/ISteamApps/UpToDateCheck/v1/?appid=730&version=%d", build))
 	if err != nil {
 		return false, 0, "", err
@@ -71,7 +76,7 @@ func FetchWorkshopMaps(collectionID string) ([]WorkshopMap, error) {
 }
 
 func fetchCollectionChildren(collectionID string) ([]string, error) {
-	resp, err := http.PostForm(
+	resp, err := steamClient.PostForm(
 		"https://api.steampowered.com/ISteamRemoteStorage/GetCollectionDetails/v1/?format=json",
 		url.Values{"collectioncount": {"1"}, "publishedfileids[0]": {collectionID}})
 	if err != nil {
@@ -105,7 +110,7 @@ func fetchMapDetails(ids []string) ([]WorkshopMap, error) {
 	for i, id := range ids {
 		form.Set(fmt.Sprintf("publishedfileids[%d]", i), id)
 	}
-	resp, err := http.PostForm(
+	resp, err := steamClient.PostForm(
 		"https://api.steampowered.com/ISteamRemoteStorage/GetPublishedFileDetails/v1/?format=json",
 		form)
 	if err != nil {

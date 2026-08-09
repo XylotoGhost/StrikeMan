@@ -29,6 +29,7 @@ export namespace main {
 	export class Config {
 	    servers: Server[];
 	    default: string;
+	    language?: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new Config(source);
@@ -38,6 +39,7 @@ export namespace main {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.servers = this.convertValues(source["servers"], Server);
 	        this.default = source["default"];
+	        this.language = source["language"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -130,8 +132,8 @@ export namespace main {
 	}
 	export class Preset {
 	    id: string;
-	    name: string;
-	    description: string;
+	    nameKey: string;
+	    descKey: string;
 	    wingman: boolean;
 	
 	    static createFrom(source: any = {}) {
@@ -141,8 +143,8 @@ export namespace main {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
-	        this.name = source["name"];
-	        this.description = source["description"];
+	        this.nameKey = source["nameKey"];
+	        this.descKey = source["descKey"];
 	        this.wingman = source["wingman"];
 	    }
 	}
@@ -171,6 +173,24 @@ export namespace main {
 	        this.checkFailed = source["checkFailed"];
 	        this.uptimeSecs = source["uptimeSecs"];
 	        this.addon = source["addon"];
+	    }
+	}
+	export class ServerView {
+	    name: string;
+	    stickyAdmin: boolean;
+	    sticky: Record<string, boolean>;
+	    warmupSeconds: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new ServerView(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.stickyAdmin = source["stickyAdmin"];
+	        this.sticky = source["sticky"];
+	        this.warmupSeconds = source["warmupSeconds"];
 	    }
 	}
 	export class Status {
@@ -233,8 +253,8 @@ export namespace main {
 	}
 	export class Toggle {
 	    id: string;
-	    label: string;
-	    hint: string;
+	    labelKey: string;
+	    hintKey: string;
 	    admin: boolean;
 	    cvar: string;
 	
@@ -245,8 +265,8 @@ export namespace main {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
-	        this.label = source["label"];
-	        this.hint = source["hint"];
+	        this.labelKey = source["labelKey"];
+	        this.hintKey = source["hintKey"];
 	        this.admin = source["admin"];
 	        this.cvar = source["cvar"];
 	    }

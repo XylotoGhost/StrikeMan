@@ -14,9 +14,11 @@ export function EndWarmup():Promise<void>;
 
 export function GetActiveServer():Promise<string>;
 
-export function GetActiveServerConfig():Promise<main.Server>;
+export function GetActiveServerConfig():Promise<main.ServerView>;
 
 export function GetConfig():Promise<main.Config>;
+
+export function GetLanguage():Promise<string>;
 
 export function GetMaps():Promise<main.MapList>;
 
@@ -43,6 +45,8 @@ export function SaveConfig(arg1:main.Config):Promise<void>;
 export function ScrambleTeams():Promise<void>;
 
 export function SelectServer(arg1:string):Promise<void>;
+
+export function SetLanguage(arg1:string):Promise<void>;
 
 export function SetTeamNames(arg1:string,arg2:string):Promise<void>;
 

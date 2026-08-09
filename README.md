@@ -108,17 +108,46 @@ On Linux: `wails build -tags webkit2_41` (needs `libgtk-3-dev`,
 Tagged pushes (`v*`) build Windows/macOS/Linux binaries via GitHub Actions and
 attach them to the release.
 
+## Languages
+
+English and German. StrikeMan follows your operating system's language on
+first run; the ⚙ settings dialog has a language selector to override it.
+Adding a language means adding one block of keys to `frontend/i18n.js` —
+presets, switches and log messages travel from the backend as keys, so they
+translate with everything else.
+
+## Development
+
+```sh
+go test ./...     # parsing, RCON packets and preset rules
+go vet ./...
+wails dev         # hot reload
+```
+
+CI runs `go vet`, `gofmt -l` and `go test -race` on every push. The race
+detector needs cgo, which a bare Windows checkout usually lacks — that is why
+it runs on Linux in CI, and it matters here because the status poll and the
+map-load goroutine touch the same state.
+
 ## Code layout
 
 | File | Purpose |
 | --- | --- |
-| `main.go` | Wails app entry, embeds `frontend/` |
-| `app.go` | All backend methods callable from the UI |
+| `main.go` | Wails app entry, embeds `frontend/`, fits the window to the screen |
+| `app.go` | App state and lifecycle, config/server bindings, server info |
+| `status.go` | Parsing `status`, reading convars, sticky admin toggles |
+| `game.go` | Maps, presets, warmup, match and team commands |
 | `rcon.go` | Minimal Source RCON protocol client |
-| `presets.go` | Game mode presets as data |
+| `presets.go` | Presets, switches and timings as data |
 | `steam.go` | Workshop lookup + server update check (no API key needed) |
-| `config.go` | Config load/save |
-| `frontend/` | The UI: one HTML page, one stylesheet, one script |
+| `config.go` | Config load/save (passwords go to the OS credential store) |
+| `frontend/app.js` | Wiring: controls to backend, polling loop |
+| `frontend/state.js` | State and backend calls, no DOM |
+| `frontend/views.js` | Rendering and UI primitives |
+| `frontend/i18n.js` | Translations (EN/DE) |
+
+The frontend uses native ES modules — there is still no npm, bundler or build
+step for it.
 
 ## License
 

@@ -34,6 +34,10 @@ export function GetConfig() {
   return window['go']['main']['App']['GetConfig']();
 }
 
+export function GetLanguage() {
+  return window['go']['main']['App']['GetLanguage']();
+}
+
 export function GetMaps() {
   return window['go']['main']['App']['GetMaps']();
 }
@@ -84,6 +88,10 @@ export function ScrambleTeams() {
 
 export function SelectServer(arg1) {
   return window['go']['main']['App']['SelectServer'](arg1);
+}
+
+export function SetLanguage(arg1) {
+  return window['go']['main']['App']['SetLanguage'](arg1);
 }
 
 export function SetTeamNames(arg1, arg2) {

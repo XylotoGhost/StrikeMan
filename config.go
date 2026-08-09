@@ -46,6 +46,8 @@ func (s *Server) StickyEnabled() bool {
 type Config struct {
 	Servers []Server `json:"servers"`
 	Default string   `json:"default"`
+	// UI language: "en", "de", or "" to follow the operating system.
+	Language string `json:"language,omitempty"`
 }
 
 func configPath() string {
