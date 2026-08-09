@@ -22,17 +22,26 @@ night does not happen in the RCON console.
 
 ## Getting started
 
-1. Download the build for your system from the
-   [latest release](https://github.com/XylotoGhost/StrikeMan/releases/latest)
-   — Windows, macOS and Linux.
+1. Grab the [latest release](https://github.com/XylotoGhost/StrikeMan/releases/latest):
+   an installer (Windows `.exe`, macOS `.dmg`) or a portable archive for
+   Windows, macOS and Linux. The Windows installer needs **no administrator
+   rights**.
 2. Start it, open ⚙ and enter the server address, RCON port and password.
    Passwords go to your operating system's credential store, never into a
    file in the repository.
 3. Optionally add a Steam Workshop collection ID to get your custom maps in
    the map list.
 
+StrikeMan keeps itself up to date: the Server card shows its own version and
+offers a one-click update from GitHub, checksum-verified.
+
+> Windows will warn that the download is unsigned — click **More info → Run
+> anyway**. [Why, and how to verify the download instead](docs/install.md#windows-protected-your-pc).
+
 ## Documentation
 
+- [Installing and updating](docs/install.md) — installer vs portable, the
+  security warnings, checksums
 - [Features in detail](docs/features.md) — what each preset and switch does
 - [CS2 and RCON notes](docs/cs2-notes.md) — what the game does and does not
   allow over RCON, and why some things work the way they do

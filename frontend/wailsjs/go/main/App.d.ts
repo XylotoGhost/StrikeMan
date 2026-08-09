@@ -10,11 +10,15 @@ export function ApplyPreset(arg1:string,arg2:string,arg3:boolean):Promise<void>;
 
 export function ChangeMap(arg1:string,arg2:boolean):Promise<void>;
 
+export function CheckForUpdate():Promise<main.UpdateInfo>;
+
 export function EndWarmup():Promise<void>;
 
 export function GetActiveServer():Promise<string>;
 
 export function GetActiveServerConfig():Promise<main.ServerView>;
+
+export function GetAppVersion():Promise<string>;
 
 export function GetConfig():Promise<main.Config>;
 
@@ -29,6 +33,8 @@ export function GetServerInfo():Promise<main.ServerInfo>;
 export function GetStatus():Promise<main.Status>;
 
 export function GetToggles():Promise<Array<main.Toggle>>;
+
+export function InstallUpdate():Promise<void>;
 
 export function KickBots():Promise<void>;
 

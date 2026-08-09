@@ -271,6 +271,28 @@ export namespace main {
 	        this.cvar = source["cvar"];
 	    }
 	}
+	export class UpdateInfo {
+	    current: string;
+	    latest: string;
+	    available: boolean;
+	    assetName: string;
+	    notes: string;
+	    error: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new UpdateInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.current = source["current"];
+	        this.latest = source["latest"];
+	        this.available = source["available"];
+	        this.assetName = source["assetName"];
+	        this.notes = source["notes"];
+	        this.error = source["error"];
+	    }
+	}
 
 }
 

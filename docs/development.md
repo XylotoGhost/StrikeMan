@@ -19,7 +19,18 @@ On Linux: `wails build -tags webkit2_41` (needs `libgtk-3-dev` and
 `libwebkit2gtk-4.1-dev`).
 
 Tagged pushes (`v*`) build Windows, macOS and Linux binaries in GitHub Actions
-and attach them to the release, so a macOS build does not require a Mac.
+and attach them to the release, so a macOS build does not require a Mac. Each
+release carries both an installer (NSIS on Windows, `.dmg` on macOS) and a
+portable archive, plus a `.sha256` for every file.
+
+The tag becomes the version the app reports, stamped in with
+`-ldflags "-X main.version=$TAG"`. A build without that stamp reports `dev` and
+is never offered an update, so a local build cannot overwrite itself.
+
+The Windows installer is configured for a per-user install
+(`build/windows/installer/project.nsi` sets `WAILS_INSTALL_SCOPE "user"` and
+`REQUEST_EXECUTION_LEVEL "user"`), which is what keeps both installation and
+self-update free of UAC prompts.
 
 ## Tests
 
@@ -68,6 +79,7 @@ the assertions cannot pass on state that happened to be correct already.
 | `rcon.go` | Source RCON protocol client |
 | `presets.go` | Presets, switches and timings as data |
 | `steam.go` | Workshop lookup and server update check (no API key needed) |
+| `update.go` | Self-update: GitHub releases, checksum, binary swap, restart |
 | `config.go` | Config load/save; passwords go to the OS credential store |
 | `frontend/app.js` | Wiring: controls to backend, polling loop |
 | `frontend/state.js` | State and backend calls, no DOM |

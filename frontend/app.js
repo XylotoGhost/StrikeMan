@@ -160,6 +160,23 @@ async function onTogglePause() {
 async function onRefreshServerInfo() {
   const { ok, result } = await call(() => api.app.GetServerInfo());
   if (ok) ui.renderServerInfo(result);
+  await checkForAppUpdate();
+}
+
+/** Asks GitHub whether a newer StrikeMan has been released. */
+async function checkForAppUpdate() {
+  const [version, update] = await Promise.all([
+    api.app.GetAppVersion().catch(() => ""),
+    api.app.CheckForUpdate().catch(() => null),
+  ]);
+  ui.renderAppUpdate(version, update);
+}
+
+async function onInstallUpdate() {
+  if (!(await ui.confirmAction("confirm.updateTitle", "confirm.updateText"))) return;
+  // On success the backend swaps the binary and restarts, so this window is
+  // about to be replaced; only a failure comes back here.
+  await call(() => api.app.InstallUpdate(), "toast.updating");
 }
 
 async function onSelectServer(name) {
@@ -332,6 +349,7 @@ function wireEvents() {
   ui.$("btn-bot-kick").onclick = () => action(() => api.app.KickBots(), "toast.botsKicked");
 
   ui.$("btn-refreshinfo").onclick = onRefreshServerInfo;
+  ui.$("btn-update").onclick = onInstallUpdate;
   ui.$("btn-clearlog").onclick = () => (ui.$("console-out").textContent = "");
 
   ui.$("console-in").addEventListener("keydown", async (e) => {

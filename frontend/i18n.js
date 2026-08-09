@@ -14,6 +14,13 @@ const strings = {
     "app.humans": "Human players",
     "app.bots": "Bots",
     "app.running": "Command running…",
+    "app.version": "StrikeMan",
+    "app.update": "App update",
+    "app.updateAvailable": "{0} available",
+    "app.upToDate": "up to date",
+    "app.updateCheckFailed": "check failed",
+    "app.devBuild": "local build",
+    "app.installUpdate": "Update",
 
     "game.title": "Game",
     "game.now": "Now running: {0} on {1}",
@@ -118,6 +125,9 @@ const strings = {
     "confirm.scrambleTitle": "Scramble teams?",
     "confirm.scrambleText":
       "Players are randomly redistributed across both teams.",
+    "confirm.updateTitle": "Install the update?",
+    "confirm.updateText":
+      "StrikeMan downloads the new version, replaces itself and restarts. The server is not affected.",
 
     "toast.pickMode": "Pick a mode first",
     "toast.pickMap": "Pick a map first",
@@ -134,6 +144,7 @@ const strings = {
     "toast.botsKicked": "Bots kicked",
     "toast.kicked": "Kicked {0}",
     "toast.announced": "Announced",
+    "toast.updating": "Downloading the update…",
 
     "preset.competitive.name": "Competitive 5v5",
     "preset.competitive.desc": "MR12. A 12:12 ends in a draw.",
@@ -167,6 +178,9 @@ const strings = {
     "log.workshopFailed": "Workshop collection: {0}",
     "log.updateCheckFailed": "Update check failed: {0}",
     "log.configUnreadable": "{0}",
+    "log.updateDownloading": "Downloading StrikeMan {0}…",
+    "log.updateRestarting": "Update to {0} installed — restarting.",
+    "log.updateNoChecksum": "No checksum published for this release; skipping verification.",
 
     "error.noServer": "No server configured",
     "error.unknownServer": "Unknown server {0}",
@@ -178,6 +192,10 @@ const strings = {
       "{0} does not support Wingman — pick one of the wingman maps",
     "error.workshopNotWingman":
       "{0} is not tagged as a Wingman map on the workshop — the server would fall back to Competitive",
+    "error.updateFailed": "Update failed: {0}",
+    "error.noUpdate": "Already on the newest version",
+    "error.updateNoAsset": "The release has no download named {0}",
+    "error.updateChecksum": "The download did not match its checksum: {0}",
   },
 
   de: {
@@ -188,6 +206,13 @@ const strings = {
     "app.humans": "Menschliche Spieler",
     "app.bots": "Bots",
     "app.running": "Befehl läuft…",
+    "app.version": "StrikeMan",
+    "app.update": "App-Update",
+    "app.updateAvailable": "{0} verfügbar",
+    "app.upToDate": "aktuell",
+    "app.updateCheckFailed": "Prüfung fehlgeschlagen",
+    "app.devBuild": "lokaler Build",
+    "app.installUpdate": "Aktualisieren",
 
     "game.title": "Spiel",
     "game.now": "Läuft gerade: {0} auf {1}",
@@ -292,6 +317,9 @@ const strings = {
     "confirm.scrambleTitle": "Teams mischen?",
     "confirm.scrambleText":
       "Die Spieler werden zufällig auf beide Teams verteilt.",
+    "confirm.updateTitle": "Update installieren?",
+    "confirm.updateText":
+      "StrikeMan lädt die neue Version, ersetzt sich selbst und startet neu. Der Server ist davon nicht betroffen.",
 
     "toast.pickMode": "Wähle zuerst einen Modus",
     "toast.pickMap": "Wähle zuerst eine Map",
@@ -308,6 +336,7 @@ const strings = {
     "toast.botsKicked": "Bots entfernt",
     "toast.kicked": "{0} gekickt",
     "toast.announced": "Gesendet",
+    "toast.updating": "Update wird geladen…",
 
     "preset.competitive.name": "Competitive 5v5",
     "preset.competitive.desc": "MR12. 12:12 endet unentschieden.",
@@ -342,6 +371,10 @@ const strings = {
     "log.workshopFailed": "Workshop-Sammlung: {0}",
     "log.updateCheckFailed": "Update-Prüfung fehlgeschlagen: {0}",
     "log.configUnreadable": "{0}",
+    "log.updateDownloading": "StrikeMan {0} wird geladen…",
+    "log.updateRestarting": "Update auf {0} installiert — Neustart.",
+    "log.updateNoChecksum":
+      "Für dieses Release ist keine Prüfsumme veröffentlicht; Prüfung übersprungen.",
 
     "error.noServer": "Kein Server konfiguriert",
     "error.unknownServer": "Unbekannter Server {0}",
@@ -353,6 +386,10 @@ const strings = {
       "{0} unterstützt Wingman nicht — wähle eine der Wingman-Maps",
     "error.workshopNotWingman":
       "{0} ist im Workshop nicht als Wingman-Map markiert — der Server würde auf Competitive zurückfallen",
+    "error.updateFailed": "Update fehlgeschlagen: {0}",
+    "error.noUpdate": "Bereits auf der neuesten Version",
+    "error.updateNoAsset": "Das Release enthält keinen Download namens {0}",
+    "error.updateChecksum": "Der Download stimmt nicht mit seiner Prüfsumme überein: {0}",
   },
 };
 

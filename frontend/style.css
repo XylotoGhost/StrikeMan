@@ -271,6 +271,10 @@ input[type="number"] { width: 80px; flex: 0 0 auto; }
 .info-list span { color: var(--muted); }
 .info-list b.ok { color: var(--ok); }
 .info-list b.warn { color: var(--accent); }
+.update-cell { display: inline-flex; align-items: center; gap: 8px; }
+.update-cell .note { font-size: var(--font-tiny); font-weight: 400; color: var(--muted); }
+.update-cell .note.ok { color: var(--ok); }
+.update-cell .note.warn { color: var(--accent); }
 
 #console-out {
   background: #0a0c0f;

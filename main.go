@@ -13,6 +13,13 @@ import (
 //go:embed all:frontend
 var assets embed.FS
 
+// version is stamped in by the release build:
+//
+//	wails build -ldflags "-X main.version=v0.8.0"
+//
+// A local build stays "dev", which never offers an update.
+var version = "dev"
+
 // Preferred window size, and the smallest the layout still works at.
 const (
 	preferredWidth  = 1200

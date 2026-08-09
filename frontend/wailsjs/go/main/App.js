@@ -18,6 +18,10 @@ export function ChangeMap(arg1, arg2) {
   return window['go']['main']['App']['ChangeMap'](arg1, arg2);
 }
 
+export function CheckForUpdate() {
+  return window['go']['main']['App']['CheckForUpdate']();
+}
+
 export function EndWarmup() {
   return window['go']['main']['App']['EndWarmup']();
 }
@@ -28,6 +32,10 @@ export function GetActiveServer() {
 
 export function GetActiveServerConfig() {
   return window['go']['main']['App']['GetActiveServerConfig']();
+}
+
+export function GetAppVersion() {
+  return window['go']['main']['App']['GetAppVersion']();
 }
 
 export function GetConfig() {
@@ -56,6 +64,10 @@ export function GetStatus() {
 
 export function GetToggles() {
   return window['go']['main']['App']['GetToggles']();
+}
+
+export function InstallUpdate() {
+  return window['go']['main']['App']['InstallUpdate']();
 }
 
 export function KickBots() {

@@ -40,6 +40,7 @@ func NewApp() *App {
 
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+	cleanupOldExecutable() // left behind by a previous self-update
 	cfg, err := LoadConfig()
 	if err != nil {
 		// Never silently fall back to "no servers configured": that looks

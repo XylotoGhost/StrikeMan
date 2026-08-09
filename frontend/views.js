@@ -294,6 +294,34 @@ export function renderServerInfo(info) {
   }
 }
 
+/** StrikeMan's own version and whether a newer release is waiting. */
+export function renderAppUpdate(version, update) {
+  $("info-appversion").textContent = version || "–";
+  const status = $("info-appupdate");
+  const button = $("btn-update");
+
+  button.classList.add("hidden");
+  if (!update) {
+    status.textContent = "";
+    status.className = "";
+    return;
+  }
+  if (update.error) {
+    status.textContent = "· " + t("app.updateCheckFailed");
+    status.className = "note";
+    return;
+  }
+  if (update.available) {
+    status.textContent = "· " + t("app.updateAvailable", [update.latest]);
+    status.className = "note warn";
+    button.classList.remove("hidden");
+    return;
+  }
+  // A local build has no release version to compare against.
+  status.textContent = "· " + (version === "dev" ? t("app.devBuild") : t("app.upToDate"));
+  status.className = version === "dev" ? "note" : "note ok";
+}
+
 // ---- Settings dialog ----
 
 export function renderServerSelect(config, activeName) {
