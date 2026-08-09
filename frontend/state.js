@@ -7,7 +7,11 @@ export const api = {
     while (!window.go || !window.runtime) {
       await new Promise((r) => setTimeout(r, 50));
     }
-    this.app = window.go.main.App;
+    // Wails namespaces bindings by the Go package the bound struct lives in
+    // (internal/app), so this is window.go.app.App. Falling back to whatever
+    // package is there keeps the UI working if that ever moves again.
+    const pkg = window.go.app || window.go[Object.keys(window.go)[0]];
+    this.app = pkg.App;
     this.runtime = window.runtime;
     return this.app;
   },

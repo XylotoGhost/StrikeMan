@@ -61,7 +61,7 @@ a server deliberately:
 STRIKEMAN_TEST_HOST=192.168.178.66 \
 STRIKEMAN_TEST_PORT=27016 \
 STRIKEMAN_TEST_PASSWORD=... \
-go test -run TestLive -v
+go test -run TestLive -v ./internal/app
 ```
 
 It skips everywhere else, including CI. The tests first push the server into a
@@ -70,24 +70,36 @@ the assertions cannot pass on state that happened to be correct already.
 
 ## Layout
 
-| File | Purpose |
-| --- | --- |
-| `main.go` | Wails entry, embeds `frontend/`, fits the window to the screen |
-| `app.go` | App state and lifecycle, config/server bindings, server info |
-| `status.go` | Parsing `status`, reading convars, sticky admin toggles |
-| `game.go` | Maps, presets, warmup, match, teams and bots |
-| `rcon.go` | Source RCON protocol client |
-| `presets.go` | Presets, switches and timings as data |
-| `steam.go` | Workshop lookup and server update check (no API key needed) |
-| `update.go` | Self-update: GitHub releases, checksum, binary swap, restart |
-| `config.go` | Config load/save; passwords go to the OS credential store |
-| `frontend/app.js` | Wiring: controls to backend, polling loop |
-| `frontend/state.js` | State and backend calls, no DOM |
-| `frontend/views.js` | Rendering and UI primitives |
-| `frontend/i18n.js` | Translations |
+```
+main.go              wiring only: embeds frontend/ and opens the window
+internal/
+  app/               the application Wails binds to
+    app.go             state, lifecycle, config and server selection
+    status.go          parsing `status`, convars, sticky admin toggles
+    game.go            maps, presets, warmup, match, teams, bots
+    presets.go         presets, switches and timings as data
+    selfupdate.go      the update buttons in the Server card
+    window.go          window sizing
+  config/            config load/save; passwords go to the credential store
+  rcon/              Source RCON protocol client
+  steam/             workshop lookup and CS2 server update check
+  update/            GitHub releases, checksum, binary swap, restart
+frontend/
+  app.js             wiring: controls to backend, polling loop
+  state.js           state and backend calls, no DOM
+  views.js           rendering and UI primitives
+  i18n.js            translations
+docs/                this documentation
+build/               icons and the NSIS installer definition
+```
 
-Every exported method on `App` is callable from the frontend as
-`window.go.main.App.<Method>`.
+`internal/` keeps the packages private to this module, and each one is
+usable on its own: `rcon`, `steam`, `update` and `config` know nothing about
+the application, and `app` is the only package that talks to Wails.
+
+Every exported method on `app.App` is callable from the frontend as
+`window.go.app.App.<Method>` — Wails namespaces the generated bindings by the
+Go package the bound struct lives in.
 
 ### Concurrency
 
