@@ -1,6 +1,6 @@
 # StrikeMan
 
-A small desktop app for running a private Counter-Strike 2 server, so match
+A small desktop app for managing a private Counter-Strike 2 server, so match
 night does not happen in the RCON console.
 
 ![StrikeMan](docs/images/strikeman.png)
