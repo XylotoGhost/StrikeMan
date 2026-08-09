@@ -45,14 +45,16 @@ var Presets = []Preset{
 	{
 		ID:           "wingman",
 		Name:         "Wingman 2v2",
-		Description:  "MR8 on wingman maps.",
+		Description:  "MR8. An 8:8 ends in a draw.",
 		Wingman:      true,
 		ExpectedMode: 2,
 		Commands:     []string{"game_type 0", "game_mode 2"},
 		PostCommands: []string{
 			"mp_friendlyfire 1",
-			"mp_overtime_enable 1", // wingman's own default
-			"mp_limitteams 1",      // re-lock team size after a 3v3 session
+			// The server's wingman config turns overtime on; standard
+			// wingman is a draw at 8:8, so turn it back off.
+			"mp_overtime_enable 0",
+			"mp_limitteams 1", // re-lock team size after a 3v3 session
 		},
 	},
 	{
@@ -64,7 +66,7 @@ var Presets = []Preset{
 		Commands:     []string{"game_type 0", "game_mode 2"},
 		PostCommands: []string{
 			"mp_friendlyfire 1",
-			"mp_overtime_enable 1",
+			"mp_overtime_enable 0", // as in wingman 2v2: 8:8 is a draw
 			"mp_limitteams 0",
 			"mp_autoteambalance 0",
 		},
