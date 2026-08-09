@@ -28,6 +28,33 @@ func (m WorkshopMap) HasTag(tag string) bool {
 	return false
 }
 
+// CheckServerUpToDate asks Steam whether a CS2 server build is current.
+// The build number is the one `status` reports as "1.41.7.4/14174".
+func CheckServerUpToDate(build int) (upToDate bool, latest int, note string, err error) {
+	resp, err := http.Get(fmt.Sprintf(
+		"https://api.steampowered.com/ISteamApps/UpToDateCheck/v1/?appid=730&version=%d", build))
+	if err != nil {
+		return false, 0, "", err
+	}
+	defer resp.Body.Close()
+
+	var data struct {
+		Response struct {
+			Success         bool   `json:"success"`
+			UpToDate        bool   `json:"up_to_date"`
+			RequiredVersion int    `json:"required_version"`
+			Message         string `json:"message"`
+		} `json:"response"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+		return false, 0, "", err
+	}
+	if !data.Response.Success {
+		return false, 0, "", errors.New("Steam could not check this build")
+	}
+	return data.Response.UpToDate, data.Response.RequiredVersion, data.Response.Message, nil
+}
+
 func FetchWorkshopMaps(collectionID string) ([]WorkshopMap, error) {
 	if collectionID == "" {
 		return nil, nil

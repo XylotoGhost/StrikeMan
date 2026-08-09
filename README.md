@@ -10,9 +10,21 @@ window. No npm, no build pipeline, ~10 source files.
 ## Features
 
 - **Live status** — hostname, current map, player list (auto-refresh).
+- **Game card** — pick the mode you *want to play*, and the map dropdown
+  immediately filters to maps supporting it (wingman-only maps are marked as
+  such), regardless of what the server is currently running. One button
+  applies the mode and loads the map.
 - **Map switcher** — the dropdown is built from the server's own installed map
   list (`maps *`), plus the maps of a Steam Workshop **collection** you
   configure. Workshop maps load via `host_workshop_map`.
+- **Live scoreboard** — optional, via CS2's Game State Integration (see below).
+- **Server info** — version plus an "is a server update available?" check
+  against Steam, and uptime.
+- **Quick toggles** — friendly fire, overtime, AFK/TK auto-kick.
+- **Announcements** — broadcast a chat message to everyone on the server.
+- **Confirmations** — disruptive actions (map/mode change, swap, scramble,
+  going live) ask first while players are on the server; kicking and
+  restarting the match always ask.
 - **Presets** — one click sets the mode convars, reloads the map and applies
   follow-up settings:
   - *Competitive 5v5* — `game_type 0`, `game_mode 1`
@@ -27,6 +39,19 @@ window. No npm, no build pipeline, ~10 source files.
   (Vanilla CS2 has no RCON command to force a specific player onto a team —
   that would need a server plugin such as CounterStrikeSharp.)
 - **Console** — free-text RCON console with output, as an escape hatch.
+
+## Live scoreboard (optional)
+
+CS2 exposes no score, round number or match phase over RCON — verified against
+a live server: `mp_teamscore_*` stays at 0, `status`/`status_json` carry no
+score, and the server pushes no console events to RCON clients. The only
+vanilla way to get a real scoreboard is **Game State Integration**, where the
+server POSTs match state to StrikeMan.
+
+Open ⚙ settings, copy the generated config into
+`game/csgo/cfg/gamestate_integration_strikeman.cfg` on the server and restart
+it. StrikeMan listens on port 3838 by default (set 0 to disable) and shows
+score, round and bomb state as soon as data arrives.
 
 ## Configuration
 
@@ -60,7 +85,8 @@ attach them to the release.
 | `app.go` | All backend methods callable from the UI |
 | `rcon.go` | Minimal Source RCON protocol client |
 | `presets.go` | Game mode presets as data |
-| `steam.go` | Workshop collection lookup (no API key needed) |
+| `steam.go` | Workshop lookup + server update check (no API key needed) |
+| `gsi.go` | Live score listener (Game State Integration) |
 | `config.go` | Config load/save |
 | `frontend/` | The UI: one HTML page, one stylesheet, one script |
 

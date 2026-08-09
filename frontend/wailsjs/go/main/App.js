@@ -6,6 +6,10 @@ export function AddBot(arg1) {
   return window['go']['main']['App']['AddBot'](arg1);
 }
 
+export function Announce(arg1) {
+  return window['go']['main']['App']['Announce'](arg1);
+}
+
 export function ApplyPreset(arg1, arg2, arg3) {
   return window['go']['main']['App']['ApplyPreset'](arg1, arg2, arg3);
 }
@@ -26,12 +30,24 @@ export function GetConfig() {
   return window['go']['main']['App']['GetConfig']();
 }
 
+export function GetGSISetup() {
+  return window['go']['main']['App']['GetGSISetup']();
+}
+
+export function GetGameState() {
+  return window['go']['main']['App']['GetGameState']();
+}
+
 export function GetMaps() {
   return window['go']['main']['App']['GetMaps']();
 }
 
 export function GetPresets() {
   return window['go']['main']['App']['GetPresets']();
+}
+
+export function GetServerInfo() {
+  return window['go']['main']['App']['GetServerInfo']();
 }
 
 export function GetStatus() {
@@ -72,6 +88,10 @@ export function SelectServer(arg1) {
 
 export function SetTeamNames(arg1, arg2) {
   return window['go']['main']['App']['SetTeamNames'](arg1, arg2);
+}
+
+export function SetToggle(arg1, arg2) {
+  return window['go']['main']['App']['SetToggle'](arg1, arg2);
 }
 
 export function StartWarmup(arg1) {

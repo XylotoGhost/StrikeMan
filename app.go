@@ -5,6 +5,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"sort"
@@ -22,15 +23,26 @@ type App struct {
 	rcon     *Rcon
 	canBatch *bool         // whether the server accepts semicolon-batched commands
 	workshop []WorkshopMap // last fetched workshop list, for tag lookups
+	build    int           // server build number from `status`, for the update check
+	gsi      *GSI
 }
 
 func NewApp() *App {
 	return &App{}
 }
 
+const defaultGsiPort = 3838
+
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 	a.config = LoadConfig()
+	if a.config.GsiPort == 0 {
+		a.config.GsiPort = defaultGsiPort
+	}
+	a.gsi = NewGSI()
+	if err := a.gsi.Start(a.config.GsiPort); err != nil {
+		a.log("Live score listener could not start on port %d: %v", a.config.GsiPort, err)
+	}
 	a.active = a.config.Default
 	if a.config.serverByName(a.active) == nil && len(a.config.Servers) > 0 {
 		a.active = a.config.Servers[0].Name
@@ -73,9 +85,15 @@ func (a *App) GetConfig() Config {
 }
 
 func (a *App) SaveConfig(cfg Config) error {
+	restartGSI := cfg.GsiPort != a.config.GsiPort
 	a.config = cfg
 	if err := cfg.Save(); err != nil {
 		return err
+	}
+	if restartGSI {
+		if err := a.gsi.Start(cfg.GsiPort); err != nil {
+			a.log("Live score listener could not start on port %d: %v", cfg.GsiPort, err)
+		}
 	}
 	if a.config.serverByName(a.active) == nil {
 		a.active = a.config.Default
@@ -126,7 +144,13 @@ type Status struct {
 	GameType   int      `json:"gameType"`
 	GameMode   int      `json:"gameMode"`
 	LimitTeams int      `json:"limitTeams"`
-	Players    []Player `json:"players"`
+	MaxRounds  int      `json:"maxRounds"`
+	Version    string   `json:"version"`
+	// Toggles: -1 unknown, 0 off, 1 on.
+	FriendlyFire int      `json:"friendlyFire"`
+	Overtime     int      `json:"overtime"`
+	Autokick     int      `json:"autokick"`
+	Players      []Player `json:"players"`
 }
 
 var (
@@ -137,9 +161,32 @@ var (
 	reGameType   = regexp.MustCompile(`game_type = (\d+)`)
 	reGameMode   = regexp.MustCompile(`game_mode = (\d+)`)
 	reLimitTeams = regexp.MustCompile(`mp_limitteams = (\d+)`)
+	reMaxRounds  = regexp.MustCompile(`mp_maxrounds = (\d+)`)
+	reVersion    = regexp.MustCompile(`(?m)^version\s*:\s*(\S+?)/(\d+)`)
 )
 
-const modeConvars = "game_type; game_mode; mp_limitteams"
+const modeConvars = "game_type; game_mode; mp_limitteams; mp_maxrounds; " + toggleConvars
+
+// Toggles exposed as switches in the UI; also the allowlist for SetToggle.
+var toggleCvars = []string{"mp_friendlyfire", "mp_overtime_enable", "mp_autokick"}
+
+const toggleConvars = "mp_friendlyfire; mp_overtime_enable; mp_autokick"
+
+// readToggle finds "<cvar> = true|false|1|0" in RCON output.
+// Returns -1 when the convar isn't present.
+func readToggle(out, cvar string) int {
+	m := regexp.MustCompile(cvar + ` = (\w+)`).FindStringSubmatch(out)
+	if m == nil {
+		return -1
+	}
+	switch strings.ToLower(m[1]) {
+	case "true", "1":
+		return 1
+	case "false", "0":
+		return 0
+	}
+	return -1
+}
 
 // GetStatus polls `status` plus the mode convars. Batching them into one
 // round trip is attempted once; if the server doesn't split on semicolons,
@@ -185,6 +232,16 @@ func (a *App) GetStatus() Status {
 	if m := reLimitTeams.FindStringSubmatch(out); m != nil {
 		st.LimitTeams, _ = strconv.Atoi(m[1])
 	}
+	if m := reMaxRounds.FindStringSubmatch(out); m != nil {
+		st.MaxRounds, _ = strconv.Atoi(m[1])
+	}
+	if m := reVersion.FindStringSubmatch(out); m != nil {
+		st.Version = m[1]
+		a.build, _ = strconv.Atoi(m[2])
+	}
+	st.FriendlyFire = readToggle(out, "mp_friendlyfire")
+	st.Overtime = readToggle(out, "mp_overtime_enable")
+	st.Autokick = readToggle(out, "mp_autokick")
 	for _, line := range strings.Split(out, "\n") {
 		m := rePlayerLine.FindStringSubmatch(line)
 		if m == nil || m[1] == "65535" || m[4] != "active" {
@@ -203,9 +260,10 @@ func (a *App) GetStatus() Status {
 // ---- Maps ----
 
 type MapList struct {
-	Official []string      `json:"official"`
-	Wingman  []string      `json:"wingman"`
-	Workshop []WorkshopMap `json:"workshop"`
+	Official    []string      `json:"official"`
+	Wingman     []string      `json:"wingman"`
+	WingmanOnly []string      `json:"wingmanOnly"`
+	Workshop    []WorkshopMap `json:"workshop"`
 }
 
 var reMapName = regexp.MustCompile(`^(ar|cs|de)_[a-z0-9_]+$`)
@@ -213,7 +271,7 @@ var reMapName = regexp.MustCompile(`^(ar|cs|de)_[a-z0-9_]+$`)
 // GetMaps asks the server which official maps it has and pairs that with the
 // configured workshop collection.
 func (a *App) GetMaps() (MapList, error) {
-	list := MapList{Official: []string{}, Wingman: WingmanMaps, Workshop: []WorkshopMap{}}
+	list := MapList{Official: []string{}, Wingman: WingmanMaps, WingmanOnly: WingmanOnlyMaps, Workshop: []WorkshopMap{}}
 	out, err := a.exec("maps *")
 	if err != nil {
 		return list, err
@@ -254,10 +312,8 @@ func (a *App) checkWingmanMap(mapRef string, workshop bool) error {
 		}
 		return nil
 	}
-	for _, m := range WingmanMaps {
-		if m == mapRef {
-			return nil
-		}
+	if contains(WingmanMaps, mapRef) {
+		return nil
 	}
 	return fmt.Errorf("%s does not support Wingman — pick one of the wingman maps", mapRef)
 }
@@ -366,6 +422,106 @@ func (a *App) AddBot(team string) error { // team: "ct" or "t"
 }
 
 func (a *App) KickBots() error { return a.execAll("bot_kick") }
+
+// ---- Toggles, announcements ----
+
+// SetToggle flips one of the convars backing the UI switches.
+func (a *App) SetToggle(cvar string, on bool) error {
+	if !contains(toggleCvars, cvar) {
+		return fmt.Errorf("%q is not a toggle", cvar)
+	}
+	value := "0"
+	if on {
+		value = "1"
+	}
+	return a.execAll(cvar + " " + value)
+}
+
+// Announce prints a message in every player's chat.
+func (a *App) Announce(msg string) error {
+	msg = strings.NewReplacer(`"`, "", ";", "", "\n", " ").Replace(strings.TrimSpace(msg))
+	if msg == "" {
+		return fmt.Errorf("nothing to announce")
+	}
+	return a.execAll(`say ` + msg)
+}
+
+// ---- Live game state (GSI) ----
+
+func (a *App) GetGameState() GameState {
+	return a.gsi.State()
+}
+
+type GSISetup struct {
+	Port     int    `json:"port"`
+	FileName string `json:"fileName"`
+	Path     string `json:"path"`
+	Content  string `json:"content"`
+}
+
+// GetGSISetup returns everything needed to enable live scores: the file to
+// create on the server and its contents, pointed back at this machine.
+func (a *App) GetGSISetup() GSISetup {
+	ip := "<your-pc-ip>"
+	if s := a.config.serverByName(a.active); s != nil {
+		ip = localIPFor(s.Host, s.Port)
+	}
+	return GSISetup{
+		Port:     a.config.GsiPort,
+		FileName: "gamestate_integration_strikeman.cfg",
+		Path:     "game/csgo/cfg/",
+		Content:  GSIConfigFile(ip, a.config.GsiPort),
+	}
+}
+
+// ---- Server info ----
+
+type ServerInfo struct {
+	Version     string `json:"version"`
+	Build       int    `json:"build"`
+	UpToDate    bool   `json:"upToDate"`
+	Latest      int    `json:"latest"`
+	UpdateNote  string `json:"updateNote"`
+	CheckFailed bool   `json:"checkFailed"`
+	UptimeSecs  int    `json:"uptimeSecs"`
+	Addon       string `json:"addon"`
+}
+
+// GetServerInfo pairs the server's own version with Steam's "is this build
+// current" endpoint, so an outdated server is visible before match night.
+func (a *App) GetServerInfo() ServerInfo {
+	info := ServerInfo{Build: a.build}
+	st := a.GetStatus()
+	info.Version = st.Version
+	info.Build = a.build
+
+	if out, err := a.exec("status_json"); err == nil {
+		var sj struct {
+			Uptime int `json:"process_uptime"`
+			Server struct {
+				Addon string `json:"addon"`
+			} `json:"server"`
+		}
+		if start := strings.Index(out, "{"); start >= 0 {
+			if end := strings.LastIndex(out, "}"); end > start {
+				json.Unmarshal([]byte(out[start:end+1]), &sj)
+			}
+		}
+		info.UptimeSecs = sj.Uptime
+		info.Addon = sj.Server.Addon
+	}
+
+	if info.Build > 0 {
+		upToDate, latest, note, err := CheckServerUpToDate(info.Build)
+		if err != nil {
+			info.CheckFailed = true
+			a.log("Update check failed: %v", err)
+		} else {
+			info.UpToDate, info.Latest, info.UpdateNote = upToDate, latest, note
+		}
+	}
+	return info
+}
 
 func (a *App) execAll(cmds ...string) error {
 	for _, cmd := range cmds {

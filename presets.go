@@ -46,8 +46,10 @@ var Presets = []Preset{
 	},
 }
 
-// Official maps with wingman spawn support; used to filter the map dropdown
-// while a wingman mode is active.
+// Official maps with wingman spawn support, and the subset that has *only*
+// wingman spawns. Verified by loading a map and looking at which intro
+// prefabs the server reports in `status`: de_inferno loads both team and
+// wingman intros, de_brewery only the wingman ones.
 var WingmanMaps = []string{
 	"de_brewery",
 	"de_dogtown",
@@ -55,6 +57,20 @@ var WingmanMaps = []string{
 	"de_nuke",
 	"de_overpass",
 	"de_vertigo",
+}
+
+var WingmanOnlyMaps = []string{
+	"de_brewery",
+	"de_dogtown",
+}
+
+func contains(list []string, s string) bool {
+	for _, v := range list {
+		if v == s {
+			return true
+		}
+	}
+	return false
 }
 
 func presetByID(id string) *Preset {

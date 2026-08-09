@@ -4,6 +4,8 @@ import {main} from '../models';
 
 export function AddBot(arg1:string):Promise<void>;
 
+export function Announce(arg1:string):Promise<void>;
+
 export function ApplyPreset(arg1:string,arg2:string,arg3:boolean):Promise<void>;
 
 export function ChangeMap(arg1:string,arg2:boolean):Promise<void>;
@@ -14,9 +16,15 @@ export function GetActiveServer():Promise<string>;
 
 export function GetConfig():Promise<main.Config>;
 
+export function GetGSISetup():Promise<main.GSISetup>;
+
+export function GetGameState():Promise<main.GameState>;
+
 export function GetMaps():Promise<main.MapList>;
 
 export function GetPresets():Promise<Array<main.Preset>>;
+
+export function GetServerInfo():Promise<main.ServerInfo>;
 
 export function GetStatus():Promise<main.Status>;
 
@@ -37,6 +45,8 @@ export function ScrambleTeams():Promise<void>;
 export function SelectServer(arg1:string):Promise<void>;
 
 export function SetTeamNames(arg1:string,arg2:string):Promise<void>;
+
+export function SetToggle(arg1:string,arg2:boolean):Promise<void>;
 
 export function StartWarmup(arg1:number):Promise<void>;
 

@@ -25,6 +25,7 @@ type Server struct {
 type Config struct {
 	Servers []Server `json:"servers"`
 	Default string   `json:"default"`
+	GsiPort int      `json:"gsiPort"` // 0 disables the live-score listener
 }
 
 func configPath() string {

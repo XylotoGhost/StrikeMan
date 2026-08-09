@@ -23,6 +23,7 @@ export namespace main {
 	export class Config {
 	    servers: Server[];
 	    default: string;
+	    gsiPort: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new Config(source);
@@ -32,6 +33,7 @@ export namespace main {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.servers = this.convertValues(source["servers"], Server);
 	        this.default = source["default"];
+	        this.gsiPort = source["gsiPort"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -52,6 +54,54 @@ export namespace main {
 		    return a;
 		}
 	}
+	export class GSISetup {
+	    port: number;
+	    fileName: string;
+	    path: string;
+	    content: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new GSISetup(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.port = source["port"];
+	        this.fileName = source["fileName"];
+	        this.path = source["path"];
+	        this.content = source["content"];
+	    }
+	}
+	export class GameState {
+	    live: boolean;
+	    map: string;
+	    mode: string;
+	    phase: string;
+	    roundNum: number;
+	    roundPhase: string;
+	    bomb: string;
+	    scoreCt: number;
+	    scoreT: number;
+	    updatedAt: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new GameState(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.live = source["live"];
+	        this.map = source["map"];
+	        this.mode = source["mode"];
+	        this.phase = source["phase"];
+	        this.roundNum = source["roundNum"];
+	        this.roundPhase = source["roundPhase"];
+	        this.bomb = source["bomb"];
+	        this.scoreCt = source["scoreCt"];
+	        this.scoreT = source["scoreT"];
+	        this.updatedAt = source["updatedAt"];
+	    }
+	}
 	export class WorkshopMap {
 	    id: string;
 	    title: string;
@@ -71,6 +121,7 @@ export namespace main {
 	export class MapList {
 	    official: string[];
 	    wingman: string[];
+	    wingmanOnly: string[];
 	    workshop: WorkshopMap[];
 	
 	    static createFrom(source: any = {}) {
@@ -81,6 +132,7 @@ export namespace main {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.official = source["official"];
 	        this.wingman = source["wingman"];
+	        this.wingmanOnly = source["wingmanOnly"];
 	        this.workshop = this.convertValues(source["workshop"], WorkshopMap);
 	    }
 	
@@ -139,6 +191,32 @@ export namespace main {
 	    }
 	}
 	
+	export class ServerInfo {
+	    version: string;
+	    build: number;
+	    upToDate: boolean;
+	    latest: number;
+	    updateNote: string;
+	    checkFailed: boolean;
+	    uptimeSecs: number;
+	    addon: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ServerInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.version = source["version"];
+	        this.build = source["build"];
+	        this.upToDate = source["upToDate"];
+	        this.latest = source["latest"];
+	        this.updateNote = source["updateNote"];
+	        this.checkFailed = source["checkFailed"];
+	        this.uptimeSecs = source["uptimeSecs"];
+	        this.addon = source["addon"];
+	    }
+	}
 	export class Status {
 	    connected: boolean;
 	    error: string;
@@ -149,6 +227,11 @@ export namespace main {
 	    gameType: number;
 	    gameMode: number;
 	    limitTeams: number;
+	    maxRounds: number;
+	    version: string;
+	    friendlyFire: number;
+	    overtime: number;
+	    autokick: number;
 	    players: Player[];
 	
 	    static createFrom(source: any = {}) {
@@ -166,6 +249,11 @@ export namespace main {
 	        this.gameType = source["gameType"];
 	        this.gameMode = source["gameMode"];
 	        this.limitTeams = source["limitTeams"];
+	        this.maxRounds = source["maxRounds"];
+	        this.version = source["version"];
+	        this.friendlyFire = source["friendlyFire"];
+	        this.overtime = source["overtime"];
+	        this.autokick = source["autokick"];
 	        this.players = this.convertValues(source["players"], Player);
 	    }
 	
