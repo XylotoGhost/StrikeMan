@@ -91,9 +91,10 @@ function isWingmanMode(st) {
 }
 
 // Which preset best describes what the server is running right now.
+// Premier and Competitive share game_mode 1 and differ only in overtime.
 function activePresetId(st) {
   if (!st || !st.connected || st.gameType !== 0) return null;
-  if (st.gameMode === 1) return "competitive";
+  if (st.gameMode === 1) return st.overtime === 1 ? "premier" : "competitive";
   if (st.gameMode === 2) return st.limitTeams === 0 ? "wingman3v3" : "wingman";
   return null;
 }

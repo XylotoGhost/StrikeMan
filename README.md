@@ -25,7 +25,11 @@ window. No npm, no build pipeline, ~10 source files.
   restarting the match always ask.
 - **Presets** — one click sets the mode convars, reloads the map and applies
   follow-up settings:
-  - *Competitive 5v5* — `game_type 0`, `game_mode 1`
+  - *Competitive 5v5* — `game_type 0`, `game_mode 1`, overtime off (12:12 draws)
+  - *Premier 5v5* — same ruleset, but overtime on (`mp_overtime_maxrounds 6`,
+    no overtime limit) so a 12:12 is played out. Note that Valve's Premier
+    also means map veto and CS Rating, which are matchmaking-only and cannot
+    exist on a private server — this is the ruleset, not the matchmaking.
   - *Wingman 2v2* — `game_type 0`, `game_mode 2`
   - *Wingman 3v3* — wingman rules and maps with 3 players per team:
     after the map reload it sets `mp_limitteams 0` and `mp_autoteambalance 0`,

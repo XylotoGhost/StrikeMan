@@ -17,14 +17,29 @@ var Presets = []Preset{
 	{
 		ID:           "competitive",
 		Name:         "Competitive 5v5",
-		Description:  "Standard competitive rules, MR12 with halftime.",
+		Description:  "MR12. A 12:12 ends in a draw.",
 		ExpectedMode: 1,
 		Commands:     []string{"game_type 0", "game_mode 1"},
+		PostCommands: []string{
+			"mp_overtime_enable 0", // undo a previous Premier round
+		},
+	},
+	{
+		ID:           "premier",
+		Name:         "Premier 5v5",
+		Description:  "MR12, but 12:12 goes to overtime.",
+		ExpectedMode: 1,
+		Commands:     []string{"game_type 0", "game_mode 1"},
+		PostCommands: []string{
+			"mp_overtime_enable 1",
+			"mp_overtime_maxrounds 6", // MR3 per overtime
+			"mp_overtime_limit 0",     // keep playing overtimes until decided
+		},
 	},
 	{
 		ID:           "wingman",
 		Name:         "Wingman 2v2",
-		Description:  "Standard wingman rules, MR16, best on wingman maps.",
+		Description:  "MR16 on wingman maps.",
 		Wingman:      true,
 		ExpectedMode: 2,
 		Commands:     []string{"game_type 0", "game_mode 2"},
@@ -35,7 +50,7 @@ var Presets = []Preset{
 	{
 		ID:           "wingman3v3",
 		Name:         "Wingman 3v3",
-		Description:  "Wingman rules and maps, but with 3 players per team.",
+		Description:  "Wingman maps, 3 players per team.",
 		Wingman:      true,
 		ExpectedMode: 2,
 		Commands:     []string{"game_type 0", "game_mode 2"},
