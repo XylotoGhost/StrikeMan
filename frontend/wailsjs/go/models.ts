@@ -23,7 +23,6 @@ export namespace main {
 	export class Config {
 	    servers: Server[];
 	    default: string;
-	    gsiPort: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new Config(source);
@@ -33,7 +32,6 @@ export namespace main {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.servers = this.convertValues(source["servers"], Server);
 	        this.default = source["default"];
-	        this.gsiPort = source["gsiPort"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -53,54 +51,6 @@ export namespace main {
 		    }
 		    return a;
 		}
-	}
-	export class GSISetup {
-	    port: number;
-	    fileName: string;
-	    path: string;
-	    content: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new GSISetup(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.port = source["port"];
-	        this.fileName = source["fileName"];
-	        this.path = source["path"];
-	        this.content = source["content"];
-	    }
-	}
-	export class GameState {
-	    live: boolean;
-	    map: string;
-	    mode: string;
-	    phase: string;
-	    roundNum: number;
-	    roundPhase: string;
-	    bomb: string;
-	    scoreCt: number;
-	    scoreT: number;
-	    updatedAt: number;
-	
-	    static createFrom(source: any = {}) {
-	        return new GameState(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.live = source["live"];
-	        this.map = source["map"];
-	        this.mode = source["mode"];
-	        this.phase = source["phase"];
-	        this.roundNum = source["roundNum"];
-	        this.roundPhase = source["roundPhase"];
-	        this.bomb = source["bomb"];
-	        this.scoreCt = source["scoreCt"];
-	        this.scoreT = source["scoreT"];
-	        this.updatedAt = source["updatedAt"];
-	    }
 	}
 	export class WorkshopMap {
 	    id: string;

@@ -11,13 +11,11 @@ window. No npm, no build pipeline, ~10 source files.
 
 - **Live status** — hostname, current map, player list (auto-refresh).
 - **Game card** — pick the mode you *want to play*, and the map dropdown
-  immediately filters to maps supporting it (wingman-only maps are marked as
-  such), regardless of what the server is currently running. One button
-  applies the mode and loads the map.
+  immediately filters to maps supporting it, regardless of what the server is
+  currently running. One button applies the mode and loads the map.
 - **Map switcher** — the dropdown is built from the server's own installed map
   list (`maps *`), plus the maps of a Steam Workshop **collection** you
   configure. Workshop maps load via `host_workshop_map`.
-- **Live scoreboard** — optional, via CS2's Game State Integration (see below).
 - **Server info** — version plus an "is a server update available?" check
   against Steam, and uptime.
 - **Quick toggles** — friendly fire, overtime, AFK/TK auto-kick.
@@ -40,18 +38,14 @@ window. No npm, no build pipeline, ~10 source files.
   that would need a server plugin such as CounterStrikeSharp.)
 - **Console** — free-text RCON console with output, as an escape hatch.
 
-## Live scoreboard (optional)
+## No live scoreboard
 
-CS2 exposes no score, round number or match phase over RCON — verified against
-a live server: `mp_teamscore_*` stays at 0, `status`/`status_json` carry no
-score, and the server pushes no console events to RCON clients. The only
-vanilla way to get a real scoreboard is **Game State Integration**, where the
-server POSTs match state to StrikeMan.
-
-Open ⚙ settings, copy the generated config into
-`game/csgo/cfg/gamestate_integration_strikeman.cfg` on the server and restart
-it. StrikeMan listens on port 3838 by default (set 0 to disable) and shows
-score, round and bomb state as soon as data arrives.
+There is deliberately no score display: CS2 exposes no score, round number or
+match phase over RCON at all. Verified against a live server —
+`mp_teamscore_*` stays at 0, `status`/`status_json` carry no score, and the
+server pushes no console events to RCON clients. Showing it would require
+Game State Integration or a server plugin, which is more moving parts than
+this tool is meant to have.
 
 ## Configuration
 
@@ -86,7 +80,6 @@ attach them to the release.
 | `rcon.go` | Minimal Source RCON protocol client |
 | `presets.go` | Game mode presets as data |
 | `steam.go` | Workshop lookup + server update check (no API key needed) |
-| `gsi.go` | Live score listener (Game State Integration) |
 | `config.go` | Config load/save |
 | `frontend/` | The UI: one HTML page, one stylesheet, one script |
 

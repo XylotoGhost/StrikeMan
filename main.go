@@ -15,8 +15,8 @@ func main() {
 	app := NewApp()
 	err := wails.Run(&options.App{
 		Title:            "StrikeMan",
-		Width:            1180,
-		Height:           940,
+		Width:            1200,
+		Height:           950,
 		MinWidth:         900,
 		MinHeight:        620,
 		BackgroundColour: &options.RGBA{R: 15, G: 17, B: 21, A: 1},

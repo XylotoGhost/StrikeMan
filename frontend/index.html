@@ -49,15 +49,6 @@
 
     <section class="card" id="card-match">
       <h2>Match</h2>
-      <div class="scoreboard" id="scoreboard">
-        <span class="sb-hint" id="sb-hint">Live score needs Game State Integration — see ⚙ settings.</span>
-        <div class="sb-live hidden" id="sb-live">
-          <span class="sb-team ct"><b id="sb-ct">0</b> CT</span>
-          <span class="sb-sep">:</span>
-          <span class="sb-team t">T <b id="sb-t">0</b></span>
-          <span class="sb-meta" id="sb-meta"></span>
-        </div>
-      </div>
       <div class="row">
         <label for="warmup-seconds">Warmup</label>
         <input id="warmup-seconds" type="number" value="120" min="5" max="3600" />
@@ -109,7 +100,6 @@
         <li><span>Version</span><b id="info-version">–</b></li>
         <li><span>Updates</span><b id="info-update">not checked</b></li>
         <li><span>Uptime</span><b id="info-uptime">–</b></li>
-        <li><span>Live score feed</span><b id="info-gsi">waiting</b></li>
       </ul>
     </section>
 
@@ -149,15 +139,6 @@
         <input id="cfg-default" type="checkbox" /> Use as default server
       </label>
       <p class="hint">Passwords are stored in your OS credential store, not in the config file.</p>
-
-      <h3>Live score (Game State Integration)</h3>
-      <label>Listen port (0 disables)
-        <input id="cfg-gsiport" type="number" placeholder="3838" />
-      </label>
-      <p class="hint">CS2 cannot report scores over RCON. To see a live scoreboard, create this
-        file on the server, then restart it:</p>
-      <p class="hint"><b id="gsi-path">game/csgo/cfg/gamestate_integration_strikeman.cfg</b></p>
-      <pre id="gsi-content" class="snippet"></pre>
       <div class="row right">
         <button value="cancel" class="ghost">Cancel</button>
         <button id="btn-save-settings" value="save">Save &amp; connect</button>

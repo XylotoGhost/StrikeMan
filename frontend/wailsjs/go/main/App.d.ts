@@ -16,10 +16,6 @@ export function GetActiveServer():Promise<string>;
 
 export function GetConfig():Promise<main.Config>;
 
-export function GetGSISetup():Promise<main.GSISetup>;
-
-export function GetGameState():Promise<main.GameState>;
-
 export function GetMaps():Promise<main.MapList>;
 
 export function GetPresets():Promise<Array<main.Preset>>;

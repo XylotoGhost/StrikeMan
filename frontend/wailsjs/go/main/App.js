@@ -30,14 +30,6 @@ export function GetConfig() {
   return window['go']['main']['App']['GetConfig']();
 }
 
-export function GetGSISetup() {
-  return window['go']['main']['App']['GetGSISetup']();
-}
-
-export function GetGameState() {
-  return window['go']['main']['App']['GetGameState']();
-}
-
 export function GetMaps() {
   return window['go']['main']['App']['GetMaps']();
 }

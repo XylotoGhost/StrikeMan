@@ -129,7 +129,6 @@ async function refreshStatus() {
     modeChanged = true;
   }
   if (modeChanged) rebuildMapSelect();
-  refreshGameState();
 }
 
 function renderNowLine() {
@@ -189,24 +188,6 @@ function renderPlayers(players) {
   }
 }
 
-// ---------- live score (GSI) ----------
-
-async function refreshGameState() {
-  const gs = await App.GetGameState().catch(() => null);
-  const live = gs && gs.live;
-  $("sb-live").classList.toggle("hidden", !live);
-  $("sb-hint").classList.toggle("hidden", !!live);
-  $("info-gsi").textContent = live ? "connected" : "waiting for server";
-  if (!live) return;
-  $("sb-ct").textContent = gs.scoreCt;
-  $("sb-t").textContent = gs.scoreT;
-  const bits = [];
-  if (gs.roundNum) bits.push(`Round ${gs.roundNum + 1}`);
-  if (gs.phase) bits.push(gs.phase);
-  if (gs.bomb) bits.push("bomb " + gs.bomb);
-  $("sb-meta").textContent = bits.join(" · ");
-}
-
 // ---------- maps & modes ----------
 
 async function refreshMaps() {
@@ -219,15 +200,6 @@ async function refreshMaps() {
 function wantsWingman() {
   const p = presets.find((x) => x.id === selectedMode);
   return !!(p && p.wingman);
-}
-
-// Annotation next to an official map name — only says what the current
-// filter does not already imply.
-function mapNote(name, wingmanView) {
-  if (wingmanView) {
-    return mapsData.wingmanOnly.includes(name) ? " · wingman only" : "";
-  }
-  return mapsData.wingman.includes(name) ? " · also wingman" : "";
 }
 
 // The dropdown follows the *selected* mode, so wingman maps are visible
@@ -249,7 +221,7 @@ function rebuildMapSelect() {
   const officials = document.createElement("optgroup");
   officials.label = "Official";
   for (const name of official) {
-    const label = name + mapNote(name, wingman) + (name === current ? "  ● current" : "");
+    const label = name + (name === current ? "  ● current" : "");
     officials.append(new Option(label, name));
   }
   sel.append(officials);
@@ -261,8 +233,7 @@ function rebuildMapSelect() {
     const ws = document.createElement("optgroup");
     ws.label = "Workshop";
     for (const m of workshop) {
-      const untagged = wingman && !(m.tags || []).length;
-      ws.append(new Option(m.title + (untagged ? " · wingman unknown" : ""), "ws:" + m.id));
+      ws.append(new Option(m.title, "ws:" + m.id));
     }
     sel.append(ws);
   }
@@ -340,7 +311,7 @@ async function togglePause() {
 
 // ---------- settings ----------
 
-let editCfg = { servers: [], default: "", gsiPort: 3838 };
+let editCfg = { servers: [], default: "" };
 let editIdx = -1;
 
 function renderServerList() {
@@ -372,18 +343,11 @@ async function openSettings() {
   editCfg = {
     servers: (cfg.servers || []).map((s) => ({ ...s })),
     default: cfg.default || "",
-    gsiPort: cfg.gsiPort || 3838,
   };
   if (!editCfg.servers.length) addServer();
   editIdx = 0;
   renderServerList();
   showServerFields();
-  $("cfg-gsiport").value = editCfg.gsiPort;
-  const setup = await App.GetGSISetup().catch(() => null);
-  if (setup) {
-    $("gsi-path").textContent = setup.path + setup.fileName;
-    $("gsi-content").textContent = setup.content;
-  }
   $("settings-dialog").showModal();
 }
 
@@ -411,7 +375,6 @@ async function saveSettings() {
   if (names.some((n) => !n)) return toast("Every server needs a name", true);
   if (new Set(names).size !== names.length) return toast("Server names must be unique", true);
   if (!editCfg.default && names.length) editCfg.default = names[0];
-  editCfg.gsiPort = parseInt($("cfg-gsiport").value, 10) || 0;
   await call(() => App.SaveConfig(editCfg), "Settings saved");
   await refreshServerSelect();
   userPickedMap = false;

@@ -24,25 +24,15 @@ type App struct {
 	canBatch *bool         // whether the server accepts semicolon-batched commands
 	workshop []WorkshopMap // last fetched workshop list, for tag lookups
 	build    int           // server build number from `status`, for the update check
-	gsi      *GSI
 }
 
 func NewApp() *App {
 	return &App{}
 }
 
-const defaultGsiPort = 3838
-
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 	a.config = LoadConfig()
-	if a.config.GsiPort == 0 {
-		a.config.GsiPort = defaultGsiPort
-	}
-	a.gsi = NewGSI()
-	if err := a.gsi.Start(a.config.GsiPort); err != nil {
-		a.log("Live score listener could not start on port %d: %v", a.config.GsiPort, err)
-	}
 	a.active = a.config.Default
 	if a.config.serverByName(a.active) == nil && len(a.config.Servers) > 0 {
 		a.active = a.config.Servers[0].Name
@@ -85,15 +75,9 @@ func (a *App) GetConfig() Config {
 }
 
 func (a *App) SaveConfig(cfg Config) error {
-	restartGSI := cfg.GsiPort != a.config.GsiPort
 	a.config = cfg
 	if err := cfg.Save(); err != nil {
 		return err
-	}
-	if restartGSI {
-		if err := a.gsi.Start(cfg.GsiPort); err != nil {
-			a.log("Live score listener could not start on port %d: %v", cfg.GsiPort, err)
-		}
 	}
 	if a.config.serverByName(a.active) == nil {
 		a.active = a.config.Default
@@ -444,34 +428,6 @@ func (a *App) Announce(msg string) error {
 		return fmt.Errorf("nothing to announce")
 	}
 	return a.execAll(`say ` + msg)
-}
-
-// ---- Live game state (GSI) ----
-
-func (a *App) GetGameState() GameState {
-	return a.gsi.State()
-}
-
-type GSISetup struct {
-	Port     int    `json:"port"`
-	FileName string `json:"fileName"`
-	Path     string `json:"path"`
-	Content  string `json:"content"`
-}
-
-// GetGSISetup returns everything needed to enable live scores: the file to
-// create on the server and its contents, pointed back at this machine.
-func (a *App) GetGSISetup() GSISetup {
-	ip := "<your-pc-ip>"
-	if s := a.config.serverByName(a.active); s != nil {
-		ip = localIPFor(s.Host, s.Port)
-	}
-	return GSISetup{
-		Port:     a.config.GsiPort,
-		FileName: "gamestate_integration_strikeman.cfg",
-		Path:     "game/csgo/cfg/",
-		Content:  GSIConfigFile(ip, a.config.GsiPort),
-	}
 }
 
 // ---- Server info ----
