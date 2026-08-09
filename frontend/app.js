@@ -327,8 +327,8 @@ function wireEvents() {
       () => api.app.SetTeamNames(ui.$("teamname-ct").value, ui.$("teamname-t").value),
       "toast.namesSet"
     );
-  ui.$("btn-bot-ct").onclick = () => action(() => api.app.AddBot("ct"));
-  ui.$("btn-bot-t").onclick = () => action(() => api.app.AddBot("t"));
+  ui.$("btn-bot-add").onclick = () => action(() => api.app.AddBot());
+  ui.$("btn-bot-remove").onclick = () => action(() => api.app.RemoveBot());
   ui.$("btn-bot-kick").onclick = () => action(() => api.app.KickBots(), "toast.botsKicked");
 
   ui.$("btn-refreshinfo").onclick = onRefreshServerInfo;

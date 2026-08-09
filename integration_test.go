@@ -129,6 +129,67 @@ func TestLivePresetApply(t *testing.T) {
 	t.Logf("after: %s", formatState(st))
 }
 
+// Adding one bot must add exactly one bot, and kicking them must make them
+// stay gone. bot_quota is both a cap and an auto-fill target, so getting this
+// wrong lets a single click fill the server.
+func TestLiveBotsDoNotAutoFill(t *testing.T) {
+	app, _ := liveApp(t)
+	defer app.rcon.Close()
+
+	if st := app.GetStatus(); st.Error != "" {
+		t.Fatalf("cannot reach the server: %s", st.Error)
+	}
+
+	if err := app.KickBots(); err != nil {
+		t.Fatalf("KickBots: %v", err)
+	}
+	waitFor(t, "the server to be free of bots", 30*time.Second, func() (bool, string) {
+		st := app.GetStatus()
+		return st.Bots == 0, formatState(st)
+	})
+
+	// Bots must not creep back while the quota says zero.
+	time.Sleep(8 * time.Second)
+	if st := app.GetStatus(); st.Bots != 0 {
+		t.Fatalf("bots came back after being kicked: %d", st.Bots)
+	}
+
+	for expected := 1; expected <= 3; expected++ {
+		if err := app.AddBot(); err != nil {
+			t.Fatalf("AddBot: %v", err)
+		}
+		waitFor(t, "exactly one more bot", 20*time.Second, func() (bool, string) {
+			st := app.GetStatus()
+			return st.Bots == expected, formatState(st)
+		})
+		// Give the server a moment to top up, which is the bug being guarded
+		// against: the count must hold.
+		time.Sleep(6 * time.Second)
+		st := app.GetStatus()
+		if st.Bots != expected {
+			t.Fatalf("after adding bot %d the server ended up with %d bots", expected, st.Bots)
+		}
+		t.Logf("added bot %d: bots=%d", expected, st.Bots)
+	}
+
+	// And removing takes exactly one away again.
+	if err := app.RemoveBot(); err != nil {
+		t.Fatalf("RemoveBot: %v", err)
+	}
+	waitFor(t, "one bot fewer", 20*time.Second, func() (bool, string) {
+		st := app.GetStatus()
+		return st.Bots == 2, formatState(st)
+	})
+
+	if err := app.KickBots(); err != nil {
+		t.Fatalf("final KickBots: %v", err)
+	}
+	waitFor(t, "bots to be cleared again", 30*time.Second, func() (bool, string) {
+		st := app.GetStatus()
+		return st.Bots == 0, formatState(st)
+	})
+}
+
 func formatState(st Status) string {
 	return strings.Join([]string{
 		"map=" + st.Map,
@@ -137,5 +198,6 @@ func formatState(st Status) string {
 		"overtime=" + strconv.Itoa(st.Toggles["overtime"]),
 		"autokick=" + strconv.Itoa(st.Toggles["autokick"]),
 		"humans=" + strconv.Itoa(st.Humans),
+		"bots=" + strconv.Itoa(st.Bots),
 	}, " ")
 }

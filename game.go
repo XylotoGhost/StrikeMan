@@ -286,16 +286,55 @@ func (a *App) SetTeamNames(ct, t string) error {
 	return a.execAll("mp_teamname_1 "+ct, "mp_teamname_2 "+t)
 }
 
-func (a *App) KickPlayer(userID string) error { return a.execAll("kickid " + userID) }
+// Bot handling is driven entirely by bot_quota, which is the only precise
+// control CS2 offers. Measured against a live server:
+//
+//   - With bot_quota_mode "normal", bot_quota is the number of bots the
+//     server keeps: setting it to 4 produces exactly 4, setting it to 2 drops
+//     back to 2, and 0 clears them and keeps them away.
+//   - bot_add_ct / bot_add_t do NOT add one bot. From 1 bot they jumped the
+//     server to 3 and rewrote bot_quota to match — they fill out a whole team
+//     layout. That is what made a single "+ Bot" click fill the server.
+//
+// So the count is set directly and the server places the bots; CS2 has no
+// reliable way to add one bot to a chosen side in this mode.
 
-func (a *App) AddBot(team string) error { // team: "ct" or "t"
-	// In the gamemode cfgs' quota modes ("competitive"/"fill") the engine
-	// manages the bot count itself and kicks manually added bots again.
-	// "normal" hands control back to us.
-	return a.execAll("bot_quota_mode normal", "bot_join_after_player 0", "bot_add_"+team)
+func (a *App) KickPlayer(userID string) error {
+	// Kicking a bot has to lower the quota as well, or the server refills the
+	// slot within seconds.
+	st := a.GetStatus()
+	for _, p := range st.Players {
+		if p.UserID == userID && p.Bot {
+			a.execAll(fmt.Sprintf("bot_quota %d", max(0, st.Bots-1)))
+			break
+		}
+	}
+	return a.execAll("kickid " + userID)
 }
 
-func (a *App) KickBots() error { return a.execAll("bot_kick") }
+// AddBot puts exactly one more bot on the server.
+func (a *App) AddBot() error {
+	st := a.GetStatus()
+	return a.execAll(
+		"bot_quota_mode normal",
+		"bot_join_after_player 0",
+		fmt.Sprintf("bot_quota %d", st.Bots+1),
+	)
+}
+
+// RemoveBot takes one bot away again.
+func (a *App) RemoveBot() error {
+	st := a.GetStatus()
+	if st.Bots == 0 {
+		return nil
+	}
+	return a.execAll("bot_quota_mode normal", fmt.Sprintf("bot_quota %d", st.Bots-1))
+}
+
+func (a *App) KickBots() error {
+	// Zero the quota first: kicking alone leaves the server refilling.
+	return a.execAll("bot_quota 0", "bot_kick")
+}
 
 // Announce prints a message in every player's chat.
 func (a *App) Announce(msg string) error {

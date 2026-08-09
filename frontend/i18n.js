@@ -47,8 +47,8 @@ const strings = {
     "teams.ctName": "CT team name",
     "teams.tName": "T team name",
     "teams.setNames": "Set names",
-    "teams.addBotCT": "+ Bot CT",
-    "teams.addBotT": "+ Bot T",
+    "teams.addBot": "+ Bot",
+    "teams.removeBot": "− Bot",
     "teams.kickBots": "Kick bots",
 
     "players.title": "Players",
@@ -221,8 +221,8 @@ const strings = {
     "teams.ctName": "CT-Teamname",
     "teams.tName": "T-Teamname",
     "teams.setNames": "Namen setzen",
-    "teams.addBotCT": "+ Bot CT",
-    "teams.addBotT": "+ Bot T",
+    "teams.addBot": "+ Bot",
+    "teams.removeBot": "− Bot",
     "teams.kickBots": "Bots entfernen",
 
     "players.title": "Spieler",
