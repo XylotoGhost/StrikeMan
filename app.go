@@ -416,8 +416,10 @@ func (a *App) runAfterMapLoad(p *Preset) {
 				a.log("> %s", cmd)
 			}
 		}
-		// Sticky toggles run last so they win over the preset's rules.
-		a.restoreSticky()
+		// Sticky admin toggles are not re-sent here: GetStatus below (and
+		// every status poll) already restores whichever ones the map load
+		// reset, and only those that actually drifted. Doing it here as
+		// well just ran the same convars twice.
 
 		// CS2 starts its own warmup after a map load, but with the
 		// all-players-connected shortcut still active and whatever length
@@ -450,29 +452,6 @@ func (a *App) runAfterMapLoad(p *Preset) {
 	}
 	if p != nil {
 		a.log("Preset %s: server did not come back in time, post commands skipped.", p.Name)
-	}
-}
-
-// restoreSticky re-sends every remembered admin toggle without waiting for
-// drift to show up in a poll.
-func (a *App) restoreSticky() {
-	s := a.config.serverByName(a.active)
-	if s == nil || !s.StickyEnabled() {
-		return
-	}
-	for id, want := range s.Sticky {
-		t := toggleByID(id)
-		if t == nil {
-			continue
-		}
-		cmds, state := t.Off, "off"
-		if want {
-			cmds, state = t.On, "on"
-		}
-		if err := a.execAll(cmds...); err == nil {
-			a.log("Kept %q %s.", t.Label, state)
-		}
-		a.lastEnforce[id] = time.Now()
 	}
 }
 

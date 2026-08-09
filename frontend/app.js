@@ -367,7 +367,9 @@ function updateWarmupButton() {
     btn.textContent = "▶ Start warmup";
     return;
   }
-  const left = Math.round((warmupEndsAt - Date.now()) / 1000);
+  // Floor, not round: the game counts down the whole second it is in, so
+  // rounding up showed one second more than the in-game timer.
+  const left = Math.floor((warmupEndsAt - Date.now()) / 1000);
   const mmss = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}`;
   btn.textContent = `⏹ End warmup · go live (${mmss})`;
 }
