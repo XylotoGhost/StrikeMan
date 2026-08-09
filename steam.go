@@ -10,11 +10,22 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 )
 
 type WorkshopMap struct {
-	ID    string `json:"id"`
-	Title string `json:"title"`
+	ID    string   `json:"id"`
+	Title string   `json:"title"`
+	Tags  []string `json:"tags"` // Steam category tags, e.g. "Classic", "Wingman"
+}
+
+func (m WorkshopMap) HasTag(tag string) bool {
+	for _, t := range m.Tags {
+		if strings.EqualFold(t, tag) {
+			return true
+		}
+	}
+	return false
 }
 
 func FetchWorkshopMaps(collectionID string) ([]WorkshopMap, error) {
@@ -81,6 +92,9 @@ func fetchMapDetails(ids []string) ([]WorkshopMap, error) {
 				PublishedFileID string `json:"publishedfileid"`
 				Title           string `json:"title"`
 				Result          int    `json:"result"`
+				Tags            []struct {
+					Tag string `json:"tag"`
+				} `json:"tags"`
 			} `json:"publishedfiledetails"`
 		} `json:"response"`
 	}
@@ -90,7 +104,11 @@ func fetchMapDetails(ids []string) ([]WorkshopMap, error) {
 	var maps []WorkshopMap
 	for _, d := range data.Response.PublishedFileDetails {
 		if d.Result == 1 && d.Title != "" {
-			maps = append(maps, WorkshopMap{ID: d.PublishedFileID, Title: d.Title})
+			m := WorkshopMap{ID: d.PublishedFileID, Title: d.Title, Tags: []string{}}
+			for _, t := range d.Tags {
+				m.Tags = append(m.Tags, t.Tag)
+			}
+			maps = append(maps, m)
 		}
 	}
 	if len(maps) == 0 {

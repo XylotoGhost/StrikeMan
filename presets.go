@@ -7,31 +7,38 @@ type Preset struct {
 	ID           string   `json:"id"`
 	Name         string   `json:"name"`
 	Description  string   `json:"description"`
+	Wingman      bool     `json:"wingman"` // needs a wingman-capable map
+	ExpectedMode int      `json:"-"`       // game_mode value once the map is up
 	Commands     []string `json:"-"`
 	PostCommands []string `json:"-"`
 }
 
 var Presets = []Preset{
 	{
-		ID:          "competitive",
-		Name:        "Competitive 5v5",
-		Description: "Standard competitive rules, MR12 with halftime.",
-		Commands:    []string{"game_type 0", "game_mode 1"},
+		ID:           "competitive",
+		Name:         "Competitive 5v5",
+		Description:  "Standard competitive rules, MR12 with halftime.",
+		ExpectedMode: 1,
+		Commands:     []string{"game_type 0", "game_mode 1"},
 	},
 	{
-		ID:          "wingman",
-		Name:        "Wingman 2v2",
-		Description: "Standard wingman rules, MR16, best on wingman maps.",
-		Commands:    []string{"game_type 0", "game_mode 2"},
+		ID:           "wingman",
+		Name:         "Wingman 2v2",
+		Description:  "Standard wingman rules, MR16, best on wingman maps.",
+		Wingman:      true,
+		ExpectedMode: 2,
+		Commands:     []string{"game_type 0", "game_mode 2"},
 		PostCommands: []string{
 			"mp_limitteams 1", // re-lock team size after a 3v3 session
 		},
 	},
 	{
-		ID:          "wingman3v3",
-		Name:        "Wingman 3v3",
-		Description: "Wingman rules and maps, but with 3 players per team.",
-		Commands:    []string{"game_type 0", "game_mode 2"},
+		ID:           "wingman3v3",
+		Name:         "Wingman 3v3",
+		Description:  "Wingman rules and maps, but with 3 players per team.",
+		Wingman:      true,
+		ExpectedMode: 2,
+		Commands:     []string{"game_type 0", "game_mode 2"},
 		PostCommands: []string{
 			"mp_limitteams 0",
 			"mp_autoteambalance 0",

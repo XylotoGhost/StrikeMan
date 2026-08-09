@@ -55,6 +55,7 @@ export namespace main {
 	export class WorkshopMap {
 	    id: string;
 	    title: string;
+	    tags: string[];
 	
 	    static createFrom(source: any = {}) {
 	        return new WorkshopMap(source);
@@ -64,6 +65,7 @@ export namespace main {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
 	        this.title = source["title"];
+	        this.tags = source["tags"];
 	    }
 	}
 	export class MapList {
@@ -122,6 +124,7 @@ export namespace main {
 	    id: string;
 	    name: string;
 	    description: string;
+	    wingman: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new Preset(source);
@@ -132,6 +135,7 @@ export namespace main {
 	        this.id = source["id"];
 	        this.name = source["name"];
 	        this.description = source["description"];
+	        this.wingman = source["wingman"];
 	    }
 	}
 	

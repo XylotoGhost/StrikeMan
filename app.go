@@ -16,11 +16,12 @@ import (
 )
 
 type App struct {
-	ctx     context.Context
-	config  Config
-	active  string // name of the currently selected server
-	rcon    *Rcon
-	canBatch *bool // whether the server accepts semicolon-batched commands
+	ctx      context.Context
+	config   Config
+	active   string // name of the currently selected server
+	rcon     *Rcon
+	canBatch *bool         // whether the server accepts semicolon-batched commands
+	workshop []WorkshopMap // last fetched workshop list, for tag lookups
 }
 
 func NewApp() *App {
@@ -51,6 +52,11 @@ func (a *App) connectActive() {
 // log sends a line to the frontend console card.
 func (a *App) log(format string, args ...any) {
 	runtime.EventsEmit(a.ctx, "log", fmt.Sprintf(format, args...))
+}
+
+// warn additionally pops up as an error toast in the frontend.
+func (a *App) warn(format string, args ...any) {
+	runtime.EventsEmit(a.ctx, "warn", fmt.Sprintf(format, args...))
 }
 
 func (a *App) exec(cmd string) (string, error) {
@@ -231,8 +237,29 @@ func (a *App) GetMaps() (MapList, error) {
 			return strings.ToLower(ws[i].Title) < strings.ToLower(ws[j].Title)
 		})
 		list.Workshop = ws
+		a.workshop = ws
 	}
 	return list, nil
+}
+
+// checkWingmanMap reports an error when a map is known not to support
+// wingman: official maps by the WingmanMaps list, workshop maps by their
+// Steam tags. Untagged workshop maps pass (the post-load check covers them).
+func (a *App) checkWingmanMap(mapRef string, workshop bool) error {
+	if workshop {
+		for _, m := range a.workshop {
+			if m.ID == mapRef && len(m.Tags) > 0 && !m.HasTag("wingman") {
+				return fmt.Errorf("%q is not tagged as a Wingman map on the workshop — the server would fall back to Competitive", m.Title)
+			}
+		}
+		return nil
+	}
+	for _, m := range WingmanMaps {
+		if m == mapRef {
+			return nil
+		}
+	}
+	return fmt.Errorf("%s does not support Wingman — pick one of the wingman maps", mapRef)
 }
 
 // ChangeMap loads an official map name or a workshop file ID.
@@ -266,6 +293,11 @@ func (a *App) ApplyPreset(id, mapRef string, workshop bool) error {
 		}
 		mapRef = st.Map
 	}
+	if p.Wingman {
+		if err := a.checkWingmanMap(mapRef, workshop); err != nil {
+			return err
+		}
+	}
 	a.log("Applying preset: %s on %s", p.Name, mapRef)
 	for _, cmd := range p.Commands {
 		if _, err := a.exec(cmd); err != nil {
@@ -275,14 +307,13 @@ func (a *App) ApplyPreset(id, mapRef string, workshop bool) error {
 	if err := a.ChangeMap(mapRef, workshop); err != nil {
 		return err
 	}
-	if len(p.PostCommands) > 0 {
-		go a.runAfterMapLoad(p)
-	}
+	go a.runAfterMapLoad(p)
 	return nil
 }
 
 // runAfterMapLoad waits until the server answers again after a map change,
-// then sends the preset's post-load commands.
+// sends the preset's post-load commands and verifies the mode actually
+// applied (the server falls back when a map doesn't support the mode).
 func (a *App) runAfterMapLoad(p *Preset) {
 	time.Sleep(5 * time.Second)
 	for i := 0; i < 12; i++ {
@@ -290,6 +321,12 @@ func (a *App) runAfterMapLoad(p *Preset) {
 			for _, cmd := range p.PostCommands {
 				a.exec(cmd)
 				a.log("> %s", cmd)
+			}
+			if out, err := a.exec("game_mode"); err == nil {
+				if m := reGameMode.FindStringSubmatch(out); m != nil && m[1] != strconv.Itoa(p.ExpectedMode) {
+					a.warn("The map does not support %s — the server fell back to another mode (game_mode = %s).", p.Name, m[1])
+					return
+				}
 			}
 			a.log("Preset %s fully applied.", p.Name)
 			return

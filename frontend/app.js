@@ -156,7 +156,13 @@ function rebuildMapSelect() {
     const ws = document.createElement("optgroup");
     ws.label = "Workshop";
     for (const m of mapsData.workshop) {
-      ws.append(new Option(m.title, "ws:" + m.id));
+      const opt = new Option(m.title, "ws:" + m.id);
+      const noWingman = (m.tags || []).length && !m.tags.some((t) => t.toLowerCase() === "wingman");
+      if (wingmanActive && noWingman) {
+        opt.disabled = true;
+        opt.text += "  (no wingman)";
+      }
+      ws.append(opt);
     }
     sel.append(ws);
   }
@@ -352,6 +358,10 @@ function wireEvents() {
   });
 
   window.runtime.EventsOn("log", logLine);
+  window.runtime.EventsOn("warn", (msg) => {
+    toast(msg, true);
+    logLine("⚠ " + msg);
+  });
 }
 
 async function init() {
