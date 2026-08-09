@@ -326,16 +326,16 @@ export function renderAppUpdate(version, update) {
 
 export function renderServerSelect(config, activeName) {
   const select = $("server-select");
+  const servers = config.servers || [];
   select.innerHTML = "";
-  for (const server of config.servers || []) {
+  for (const server of servers) {
     select.append(new Option(server.name, server.name));
   }
   select.value = activeName;
-  select.classList.toggle("hidden", (config.servers || []).length < 2);
 }
 
-export function renderLanguageSelect(currentValue) {
-  const select = $("cfg-language");
+export function renderLanguageSelect(id, currentValue) {
+  const select = $(id);
   select.innerHTML = "";
   for (const language of languages) {
     select.append(new Option(language.label || t(language.labelKey), language.code));
@@ -343,29 +343,73 @@ export function renderLanguageSelect(currentValue) {
   select.value = currentValue || "";
 }
 
-export function renderSettingsList(draft, index) {
+/** A one-line outcome under a form: a test result, an import summary. */
+export function setResult(id, message, kind = "") {
+  const el = $(id);
+  el.textContent = message;
+  el.className = "result" + (kind ? " " + kind : "");
+}
+
+export function renderSettingsList(draft, index, onPick) {
   const list = $("srv-list");
   list.innerHTML = "";
+  if (!draft.servers.length) {
+    const empty = document.createElement("li");
+    empty.className = "empty";
+    empty.textContent = t("settings.noServers");
+    list.append(empty);
+    return;
+  }
   draft.servers.forEach((server, i) => {
-    const label = server.name + (server.name === draft.default ? "  ★" : "");
-    list.append(new Option(label, i));
+    const item = document.createElement("li");
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = i === index ? "selected" : "";
+    const name = document.createElement("span");
+    name.className = "srv-name";
+    name.textContent = server.name || t("settings.newServer");
+    if (server.name && server.name === draft.default) {
+      const star = document.createElement("span");
+      star.className = "srv-star";
+      star.textContent = " ★";
+      star.title = t("settings.default");
+      name.append(star);
+    }
+    const addr = document.createElement("span");
+    addr.className = "srv-addr";
+    addr.textContent = server.host ? `${server.host}:${server.port || 27015}` : "–";
+    button.append(name, addr);
+    button.onclick = () => onPick(i);
+    item.append(button);
+    list.append(item);
   });
-  list.value = index;
 }
+
+const serverFieldIds = [
+  "cfg-name",
+  "cfg-host",
+  "cfg-port",
+  "cfg-password",
+  "cfg-collection",
+  "cfg-default",
+  "cfg-sticky",
+];
 
 export function renderSettingsFields(draft, index) {
   const server = draft.servers[index];
-  const fields = [
-    "cfg-name",
-    "cfg-host",
-    "cfg-port",
-    "cfg-password",
-    "cfg-collection",
-    "cfg-default",
-    "cfg-sticky",
-  ];
-  for (const id of fields) $(id).disabled = !server;
-  if (!server) return;
+  for (const id of serverFieldIds) $(id).disabled = !server;
+  for (const id of ["btn-srv-test", "btn-srv-export", "btn-srv-remove"]) {
+    $(id).disabled = !server;
+  }
+  setResult("srv-result", "");
+  if (!server) {
+    for (const id of serverFieldIds) {
+      const field = $(id);
+      if (field.type === "checkbox") field.checked = false;
+      else field.value = "";
+    }
+    return;
+  }
   $("cfg-name").value = server.name || "";
   $("cfg-host").value = server.host || "";
   $("cfg-port").value = server.port || 27015;
@@ -373,4 +417,27 @@ export function renderSettingsFields(draft, index) {
   $("cfg-collection").value = server.collectionId || "";
   $("cfg-default").checked = server.name === draft.default;
   $("cfg-sticky").checked = server.stickyAdmin !== false;
+}
+
+// ---- First-launch setup ----
+
+export function showSetup(visible) {
+  $("setup").classList.toggle("hidden", !visible);
+}
+
+export function setupServer() {
+  return {
+    name: $("setup-name").value.trim(),
+    host: $("setup-host").value.trim(),
+    port: parseInt($("setup-port").value, 10) || 27015,
+    password: $("setup-password").value,
+    collectionId: "",
+  };
+}
+
+export function fillSetup(server) {
+  $("setup-name").value = server.name || "";
+  $("setup-host").value = server.host || "";
+  $("setup-port").value = server.port || 27015;
+  $("setup-password").value = server.password || "";
 }

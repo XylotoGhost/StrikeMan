@@ -15,6 +15,8 @@ export function CheckForUpdate():Promise<app.UpdateInfo>;
 
 export function EndWarmup():Promise<void>;
 
+export function ExportServers(arg1:Array<app.PortableServer>,arg2:string):Promise<string>;
+
 export function GetActiveServer():Promise<string>;
 
 export function GetActiveServerConfig():Promise<app.ServerView>;
@@ -34,6 +36,8 @@ export function GetServerInfo():Promise<app.ServerInfo>;
 export function GetStatus():Promise<app.Status>;
 
 export function GetToggles():Promise<Array<app.Toggle>>;
+
+export function ImportServers(arg1:string):Promise<Array<config.Server>>;
 
 export function InstallUpdate():Promise<void>;
 
@@ -66,5 +70,7 @@ export function SetWarmupSeconds(arg1:number):Promise<void>;
 export function StartWarmup(arg1:number):Promise<void>;
 
 export function SwapTeams():Promise<void>;
+
+export function TestServer(arg1:string,arg2:number,arg3:string):Promise<string>;
 
 export function Unpause():Promise<void>;

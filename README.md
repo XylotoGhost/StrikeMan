@@ -18,6 +18,9 @@ night does not happen in the RCON console.
   changes.
 - **See the server.** Players, current mode and map, version, uptime, and
   whether a CS2 server update is waiting.
+- **Manage several servers.** Switch between them from the main window, test a
+  connection before saving it, and export a server to a file you can hand to a
+  fellow admin — the password is never in it.
 - English and German, and a plain RCON console when you want one.
 
 ## Getting started
@@ -26,9 +29,9 @@ night does not happen in the RCON console.
    an installer (Windows `.exe`, macOS `.dmg`) or a portable archive for
    Windows, macOS and Linux. The Windows installer needs **no administrator
    rights**.
-2. Start it, open ⚙ and enter the server address, RCON port and password.
-   Passwords go to your operating system's credential store, never into a
-   file in the repository.
+2. Start it. On first launch it asks for the server address, RCON port and
+   password — or imports a server file someone sent you. Passwords go to your
+   operating system's credential store, never into a file in the repository.
 3. Optionally add a Steam Workshop collection ID to get your custom maps in
    the map list.
 

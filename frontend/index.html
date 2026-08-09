@@ -13,7 +13,6 @@
       <h1>StrikeMan</h1>
     </div>
     <div class="server-info">
-      <select id="server-select" class="hidden" data-i18n-title="app.switchServer" data-i18n-aria="app.switchServer"></select>
       <span id="status-dot" class="dot offline" aria-hidden="true"></span>
       <span id="server-name">–</span>
       <span class="chip" data-i18n-title="app.currentMap">
@@ -30,10 +29,19 @@
       </span>
       <span id="spinner" class="spinner hidden" data-i18n-title="app.running" role="status"></span>
     </div>
-    <button id="btn-settings" class="ghost" data-i18n-title="app.settings" data-i18n-aria="app.settings">⚙</button>
   </header>
 
   <main>
+    <div class="server-bar">
+      <label for="server-select" data-i18n="app.serverLabel">Server</label>
+      <select id="server-select" data-i18n-title="app.switchServer" data-i18n-aria="app.switchServer"></select>
+      <button id="btn-server-add" class="ghost icon" data-i18n-title="app.addServer" data-i18n-aria="app.addServer">+</button>
+      <span class="grow"></span>
+      <button id="btn-settings" class="ghost" data-i18n-title="app.settings">
+        <span aria-hidden="true">⚙</span> <span data-i18n="app.settings">Settings</span>
+      </button>
+    </div>
+
     <section class="card wide" id="card-game">
       <h2 data-i18n="game.title">Game</h2>
       <p class="now" id="now-line">–</p>
@@ -121,45 +129,65 @@
     </section>
   </main>
 
-  <dialog id="settings-dialog">
-    <form method="dialog">
-      <h2 data-i18n="settings.title">Settings</h2>
-      <div class="row">
-        <select id="srv-list"></select>
-        <button type="button" id="btn-srv-add" class="ghost" data-i18n="settings.add">Add</button>
-        <button type="button" id="btn-srv-remove" class="ghost" data-i18n="settings.remove">Remove</button>
+  <dialog id="settings-dialog" class="settings">
+    <h2 data-i18n="settings.title">Settings</h2>
+
+    <div class="settings-body">
+      <aside class="srv-column">
+        <h3 data-i18n="settings.servers">Servers</h3>
+        <ul id="srv-list" class="srv-list"></ul>
+        <div class="row">
+          <button id="btn-srv-add" class="ghost small" data-i18n="settings.add">+ Add</button>
+          <button id="btn-srv-import" class="ghost small" data-i18n="settings.import" data-i18n-title="settings.importHint">Import…</button>
+        </div>
+      </aside>
+
+      <div class="srv-fields" id="srv-fields">
+        <label><span data-i18n="settings.name">Name</span>
+          <input id="cfg-name" type="text" data-i18n-placeholder="settings.namePlaceholder" />
+        </label>
+        <div class="field-row">
+          <label class="grow"><span data-i18n="settings.host">Server host</span>
+            <input id="cfg-host" type="text" placeholder="192.168.178.66" />
+          </label>
+          <label class="narrow"><span data-i18n="settings.port">RCON port</span>
+            <input id="cfg-port" type="number" placeholder="27016" />
+          </label>
+        </div>
+        <label><span data-i18n="settings.password">RCON password</span>
+          <input id="cfg-password" type="password" />
+        </label>
+        <label><span data-i18n="settings.collection">Workshop collection ID</span>
+          <input id="cfg-collection" type="text" data-i18n-placeholder="settings.collectionPlaceholder" />
+        </label>
+        <label class="check">
+          <input id="cfg-default" type="checkbox" /> <span data-i18n="settings.default">Use as default server</span>
+        </label>
+        <label class="check">
+          <input id="cfg-sticky" type="checkbox" /> <span data-i18n="settings.sticky">Keep admin toggles</span>
+        </label>
+        <p class="hint" data-i18n="settings.stickyHint"></p>
+        <div class="row">
+          <button id="btn-srv-test" class="ghost small" data-i18n="settings.test">Test connection</button>
+          <button id="btn-srv-export" class="ghost small" data-i18n="settings.export" data-i18n-title="settings.exportHint">Export…</button>
+          <span class="grow"></span>
+          <button id="btn-srv-remove" class="danger small" data-i18n="settings.remove">Remove</button>
+        </div>
+        <p class="result" id="srv-result"></p>
       </div>
-      <label><span data-i18n="settings.name">Name</span>
-        <input id="cfg-name" type="text" data-i18n-placeholder="settings.namePlaceholder" />
-      </label>
-      <label><span data-i18n="settings.host">Server host</span>
-        <input id="cfg-host" type="text" placeholder="192.168.178.66" />
-      </label>
-      <label><span data-i18n="settings.port">RCON port</span>
-        <input id="cfg-port" type="number" placeholder="27016" />
-      </label>
-      <label><span data-i18n="settings.password">RCON password</span>
-        <input id="cfg-password" type="password" />
-      </label>
-      <label><span data-i18n="settings.collection">Workshop collection ID</span>
-        <input id="cfg-collection" type="text" data-i18n-placeholder="settings.collectionPlaceholder" />
-      </label>
-      <label class="check">
-        <input id="cfg-default" type="checkbox" /> <span data-i18n="settings.default">Use as default server</span>
-      </label>
-      <label class="check">
-        <input id="cfg-sticky" type="checkbox" /> <span data-i18n="settings.sticky">Keep admin toggles</span>
-      </label>
-      <p class="hint" data-i18n="settings.stickyHint"></p>
-      <label><span data-i18n="settings.language">Language</span>
+    </div>
+
+    <div class="settings-general">
+      <label class="narrow"><span data-i18n="settings.language">Language</span>
         <select id="cfg-language"></select>
       </label>
       <p class="hint" data-i18n="settings.passwordHint"></p>
-      <div class="row right">
-        <button value="cancel" class="ghost" data-i18n="settings.cancel">Cancel</button>
-        <button id="btn-save-settings" value="save" data-i18n="settings.save">Save</button>
-      </div>
-    </form>
+    </div>
+
+    <div class="row right">
+      <button id="btn-cancel-settings" class="ghost" data-i18n="settings.cancel">Cancel</button>
+      <button id="btn-save-settings" data-i18n="settings.save">Save</button>
+    </div>
   </dialog>
 
   <dialog id="confirm-dialog">
@@ -170,6 +198,45 @@
       <button id="confirm-yes" class="danger" data-i18n="confirm.yes">Do it</button>
     </div>
   </dialog>
+
+  <!-- Shown instead of the app until the first server exists. -->
+  <div id="setup" class="setup hidden">
+    <div class="setup-card">
+      <div class="brand">
+        <span class="logo" aria-hidden="true">⌖</span>
+        <h1 data-i18n="setup.welcome">Welcome to StrikeMan</h1>
+      </div>
+      <p class="setup-lead" data-i18n="setup.lead"></p>
+
+      <label class="narrow"><span data-i18n="settings.language">Language</span>
+        <select id="setup-language"></select>
+      </label>
+
+      <h3 data-i18n="setup.addTitle">Connect your server</h3>
+      <label><span data-i18n="settings.name">Name</span>
+        <input id="setup-name" type="text" data-i18n-placeholder="settings.namePlaceholder" />
+      </label>
+      <div class="field-row">
+        <label class="grow"><span data-i18n="settings.host">Server host</span>
+          <input id="setup-host" type="text" placeholder="192.168.178.66" />
+        </label>
+        <label class="narrow"><span data-i18n="settings.port">RCON port</span>
+          <input id="setup-port" type="number" value="27015" />
+        </label>
+      </div>
+      <label><span data-i18n="settings.password">RCON password</span>
+        <input id="setup-password" type="password" />
+      </label>
+      <p class="hint" data-i18n="settings.passwordHint"></p>
+      <p class="result" id="setup-result"></p>
+
+      <div class="row right">
+        <button id="btn-setup-import" class="ghost" data-i18n="setup.import" data-i18n-title="settings.importHint">Import from a file…</button>
+        <button id="btn-setup-test" class="ghost" data-i18n="settings.test">Test connection</button>
+        <button id="btn-setup-save" data-i18n="settings.save">Save & connect</button>
+      </div>
+    </div>
+  </div>
 
   <div id="toast" role="alert"></div>
   <script type="module" src="app.js"></script>

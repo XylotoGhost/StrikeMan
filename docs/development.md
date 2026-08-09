@@ -45,6 +45,11 @@ The unit tests cover the parts that break quietly: parsing real captured
 the preset rules — for instance that the wingman presets never re-acquire
 overtime.
 
+Server files get their own attention because the failure is silent and
+permanent: `servers_test.go` asserts that an export contains no password at
+all, that an imported file cannot smuggle one back in, and that malformed
+files are rejected rather than half-applied.
+
 CI additionally runs `gofmt -l` and `go test -race`. The race detector needs
 cgo, which a bare Windows checkout usually lacks, so that is where the
 concurrency guarantees are actually checked — it matters because the status
@@ -78,6 +83,7 @@ internal/
     status.go          parsing `status`, convars, sticky admin toggles
     game.go            maps, presets, warmup, match, teams, bots
     presets.go         presets, switches and timings as data
+    servers.go         server files (import/export) and the connection test
     selfupdate.go      the update buttons in the Server card
     window.go          window sizing
   config/            config load/save; passwords go to the credential store

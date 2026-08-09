@@ -21,6 +21,8 @@ const strings = {
     "app.updateCheckFailed": "check failed",
     "app.devBuild": "local build",
     "app.installUpdate": "Update",
+    "app.serverLabel": "Server",
+    "app.addServer": "Add a server",
 
     "game.title": "Game",
     "game.now": "Now running: {0} on {1}",
@@ -103,6 +105,28 @@ const strings = {
     "settings.nameUnique": "Server names must be unique",
     "settings.saved": "Settings saved",
     "settings.newServer": "New server",
+    "settings.servers": "Servers",
+    "settings.noServers": "No servers yet",
+    "settings.import": "Import…",
+    "settings.importHint":
+      "Read a server file — everything except the password, which you fill in here.",
+    "settings.imported": "{0} server(s) imported — enter the RCON password",
+    "settings.export": "Export…",
+    "settings.exportHint": "Write this server to a file. The password is never included.",
+    "settings.exported": "Saved to {0}",
+    "settings.test": "Test connection",
+    "settings.testing": "Connecting…",
+    "settings.testOk": "Connected to {0}",
+
+    "setup.welcome": "Welcome to StrikeMan",
+    "setup.lead":
+      "Manage your Counter-Strike 2 server without the console. Point StrikeMan at it once and it remembers.",
+    "setup.addTitle": "Connect your server",
+    "setup.import": "Import from a file…",
+    "setup.imported": "{0} server(s) read from the file — enter the RCON password",
+
+    "dialog.importTitle": "Open a StrikeMan server file",
+    "dialog.exportTitle": "Save the server file",
 
     "confirm.yes": "Do it",
     "confirm.cancel": "Cancel",
@@ -181,6 +205,8 @@ const strings = {
     "log.updateDownloading": "Downloading StrikeMan {0}…",
     "log.updateRestarting": "Update to {0} installed — restarting.",
     "log.updateNoChecksum": "No checksum published for this release; skipping verification.",
+    "log.serversExported": "Exported {0} server(s) to {1}",
+    "log.serversImported": "Imported {0} server(s) from {1}",
 
     "error.noServer": "No server configured",
     "error.unknownServer": "Unknown server {0}",
@@ -196,6 +222,14 @@ const strings = {
     "error.noUpdate": "Already on the newest version",
     "error.updateNoAsset": "The release has no download named {0}",
     "error.updateChecksum": "The download did not match its checksum: {0}",
+    "error.hostRequired": "Enter the server host",
+    "error.portInvalid": "Enter a port between 1 and 65535",
+    "error.exportEmpty": "Nothing to export",
+    "error.importParse": "That is not a StrikeMan server file: {0}",
+    "error.importEmpty": "No usable server in that file",
+    "error.importFormat": "That file was written by a newer StrikeMan (format {0})",
+    "error.importTooBig": "That file is too large to be a server file",
+    "error.noWindow": "No window available for the file dialog",
   },
 
   de: {
@@ -213,6 +247,8 @@ const strings = {
     "app.updateCheckFailed": "Prüfung fehlgeschlagen",
     "app.devBuild": "lokaler Build",
     "app.installUpdate": "Aktualisieren",
+    "app.serverLabel": "Server",
+    "app.addServer": "Server hinzufügen",
 
     "game.title": "Spiel",
     "game.now": "Läuft gerade: {0} auf {1}",
@@ -295,6 +331,30 @@ const strings = {
     "settings.nameUnique": "Servernamen müssen eindeutig sein",
     "settings.saved": "Einstellungen gespeichert",
     "settings.newServer": "Neuer Server",
+    "settings.servers": "Server",
+    "settings.noServers": "Noch keine Server",
+    "settings.import": "Importieren…",
+    "settings.importHint":
+      "Liest eine Serverdatei — alles außer dem Passwort, das du hier einträgst.",
+    "settings.imported": "{0} Server importiert — bitte das RCON-Passwort eintragen",
+    "settings.export": "Exportieren…",
+    "settings.exportHint":
+      "Schreibt diesen Server in eine Datei. Das Passwort ist nie enthalten.",
+    "settings.exported": "Gespeichert unter {0}",
+    "settings.test": "Verbindung testen",
+    "settings.testing": "Verbinde…",
+    "settings.testOk": "Verbunden mit {0}",
+
+    "setup.welcome": "Willkommen bei StrikeMan",
+    "setup.lead":
+      "Verwalte deinen Counter-Strike-2-Server ohne Konsole. Einmal eintragen, StrikeMan merkt es sich.",
+    "setup.addTitle": "Server verbinden",
+    "setup.import": "Aus Datei importieren…",
+    "setup.imported":
+      "{0} Server aus der Datei gelesen — bitte das RCON-Passwort eintragen",
+
+    "dialog.importTitle": "StrikeMan-Serverdatei öffnen",
+    "dialog.exportTitle": "Serverdatei speichern",
 
     "confirm.yes": "Ausführen",
     "confirm.cancel": "Abbrechen",
@@ -375,6 +435,8 @@ const strings = {
     "log.updateRestarting": "Update auf {0} installiert — Neustart.",
     "log.updateNoChecksum":
       "Für dieses Release ist keine Prüfsumme veröffentlicht; Prüfung übersprungen.",
+    "log.serversExported": "{0} Server nach {1} exportiert",
+    "log.serversImported": "{0} Server aus {1} importiert",
 
     "error.noServer": "Kein Server konfiguriert",
     "error.unknownServer": "Unbekannter Server {0}",
@@ -390,6 +452,15 @@ const strings = {
     "error.noUpdate": "Bereits auf der neuesten Version",
     "error.updateNoAsset": "Das Release enthält keinen Download namens {0}",
     "error.updateChecksum": "Der Download stimmt nicht mit seiner Prüfsumme überein: {0}",
+    "error.hostRequired": "Bitte den Server-Host eintragen",
+    "error.portInvalid": "Bitte einen Port zwischen 1 und 65535 eintragen",
+    "error.exportEmpty": "Nichts zu exportieren",
+    "error.importParse": "Das ist keine StrikeMan-Serverdatei: {0}",
+    "error.importEmpty": "Kein brauchbarer Server in dieser Datei",
+    "error.importFormat":
+      "Diese Datei stammt aus einem neueren StrikeMan (Format {0})",
+    "error.importTooBig": "Diese Datei ist zu groß für eine Serverdatei",
+    "error.noWindow": "Kein Fenster für den Dateidialog verfügbar",
   },
 };
 

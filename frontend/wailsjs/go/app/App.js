@@ -26,6 +26,10 @@ export function EndWarmup() {
   return window['go']['app']['App']['EndWarmup']();
 }
 
+export function ExportServers(arg1, arg2) {
+  return window['go']['app']['App']['ExportServers'](arg1, arg2);
+}
+
 export function GetActiveServer() {
   return window['go']['app']['App']['GetActiveServer']();
 }
@@ -64,6 +68,10 @@ export function GetStatus() {
 
 export function GetToggles() {
   return window['go']['app']['App']['GetToggles']();
+}
+
+export function ImportServers(arg1) {
+  return window['go']['app']['App']['ImportServers'](arg1);
 }
 
 export function InstallUpdate() {
@@ -128,6 +136,10 @@ export function StartWarmup(arg1) {
 
 export function SwapTeams() {
   return window['go']['app']['App']['SwapTeams']();
+}
+
+export function TestServer(arg1, arg2, arg3) {
+  return window['go']['app']['App']['TestServer'](arg1, arg2, arg3);
 }
 
 export function Unpause() {

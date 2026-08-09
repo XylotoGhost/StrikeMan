@@ -1,13 +1,7 @@
 // Wiring: connects the UI controls to the backend and keeps the views in
 // sync with the polled state.
 
-import {
-  t,
-  setLanguage,
-  applyTranslations,
-  translateError,
-  getLanguage,
-} from "./i18n.js";
+import { t, setLanguage, applyTranslations, translateError } from "./i18n.js";
 import {
   api,
   state,
@@ -191,28 +185,85 @@ async function loadMaps() {
   if (ok) ui.renderMapSelect();
 }
 
+// ---- Server definitions: import, export, test ----
+
+/** The shape ExportServers takes: everything except the password. */
+function portable(server) {
+  return {
+    name: server.name,
+    host: server.host,
+    port: server.port || 27015,
+    collectionId: server.collectionId || "",
+    stickyAdmin: server.stickyAdmin === undefined ? null : server.stickyAdmin,
+    sticky: server.sticky || {},
+    warmupSeconds: server.warmupSeconds || 0,
+  };
+}
+
+/** Keeps imported names from colliding with the ones already configured. */
+function uniqueName(base, taken) {
+  const name = base || t("settings.newServer");
+  if (!taken.includes(name)) return name;
+  let n = 2;
+  while (taken.includes(`${name} (${n})`)) n++;
+  return `${name} (${n})`;
+}
+
+/**
+ * Tries a host/port/password and reports the outcome inline rather than as a
+ * toast — the answer belongs next to the fields it is about. Read-only on the
+ * server side, so it is safe during a match.
+ */
+async function testConnection(host, port, password, resultId) {
+  ui.setResult(resultId, t("settings.testing"));
+  ui.setBusy(true);
+  try {
+    const hostname = await api.app.TestServer(host, port, password);
+    ui.setResult(resultId, t("settings.testOk", [hostname]), "ok");
+    return true;
+  } catch (err) {
+    ui.setResult(resultId, translateError(err), "error");
+    return false;
+  } finally {
+    ui.setBusy(false);
+  }
+}
+
 // ---- Settings dialog ----
 
 let draft = { servers: [], default: "" };
 let draftIndex = -1;
 
-async function openSettings() {
+function renderDraft() {
+  ui.renderSettingsList(draft, draftIndex, selectDraft);
+  ui.renderSettingsFields(draft, draftIndex);
+}
+
+function selectDraft(index) {
+  draftIndex = index;
+  renderDraft();
+}
+
+async function openSettings({ addNew = false } = {}) {
   const config = await api.app.GetConfig();
   draft = {
     servers: (config.servers || []).map((s) => ({ ...s })),
     default: config.default || "",
   };
-  if (!draft.servers.length) addServer();
-  draftIndex = 0;
-  ui.renderSettingsList(draft, draftIndex);
-  ui.renderSettingsFields(draft, draftIndex);
-  ui.renderLanguageSelect(await api.app.GetLanguage());
+  const active = await api.app.GetActiveServer().catch(() => "");
+  draftIndex = Math.max(
+    0,
+    draft.servers.findIndex((s) => s.name === active)
+  );
+  ui.renderLanguageSelect("cfg-language", await api.app.GetLanguage());
   ui.$("settings-dialog").showModal();
+  if (addNew || !draft.servers.length) addServer();
+  else renderDraft();
 }
 
 function addServer() {
   draft.servers.push({
-    name: t("settings.newServer"),
+    name: uniqueName(t("settings.newServer"), draft.servers.map((s) => s.name)),
     host: "",
     port: 27015,
     password: "",
@@ -220,8 +271,9 @@ function addServer() {
   });
   if (draft.servers.length === 1) draft.default = draft.servers[0].name;
   draftIndex = draft.servers.length - 1;
-  ui.renderSettingsList(draft, draftIndex);
-  ui.renderSettingsFields(draft, draftIndex);
+  renderDraft();
+  ui.$("cfg-name").focus();
+  ui.$("cfg-name").select();
 }
 
 function removeServer() {
@@ -231,17 +283,49 @@ function removeServer() {
     draft.default = draft.servers[0] ? draft.servers[0].name : "";
   }
   draftIndex = Math.min(draftIndex, draft.servers.length - 1);
-  ui.renderSettingsList(draft, draftIndex);
-  ui.renderSettingsFields(draft, draftIndex);
+  renderDraft();
+}
+
+async function onImportServers() {
+  const { ok, result } = await call(() => api.app.ImportServers(t("dialog.importTitle")));
+  if (!ok || !result || !result.length) return; // cancelled
+  const taken = draft.servers.map((s) => s.name);
+  for (const server of result) {
+    server.name = uniqueName(server.name, taken);
+    taken.push(server.name);
+    draft.servers.push(server);
+  }
+  if (!draft.default) draft.default = draft.servers[0].name;
+  draftIndex = draft.servers.length - result.length;
+  renderDraft();
+  ui.setResult("srv-result", t("settings.imported", [result.length]), "ok");
+  ui.$("cfg-password").focus();
+}
+
+async function onExportServer() {
+  const server = draft.servers[draftIndex];
+  if (!server) return;
+  if (!server.host) return ui.setResult("srv-result", t("error.hostRequired"), "error");
+  const { ok, result } = await call(() =>
+    api.app.ExportServers([portable(server)], t("dialog.exportTitle"))
+  );
+  if (ok && result) ui.setResult("srv-result", t("settings.exported", [result]), "ok");
+}
+
+async function onTestSettingsServer() {
+  const server = draft.servers[draftIndex];
+  if (!server) return;
+  await testConnection(server.host, server.port || 27015, server.password || "", "srv-result");
 }
 
 async function saveSettings() {
-  const names = draft.servers.map((s) => s.name.trim());
+  const names = draft.servers.map((s) => (s.name || "").trim());
   if (names.some((n) => !n)) return ui.toast(t("settings.nameRequired"), true);
   if (new Set(names).size !== names.length) {
     return ui.toast(t("settings.nameUnique"), true);
   }
   if (!draft.default && names.length) draft.default = names[0];
+  ui.$("settings-dialog").close();
 
   const language = ui.$("cfg-language").value;
   await call(() => api.app.SetLanguage(language));
@@ -264,34 +348,88 @@ async function refreshServerSelect() {
   ui.renderServerSelect(config, active);
 }
 
+// ---- First-launch setup ----
+
+// Servers beyond the first from an imported file: saved along with it, their
+// passwords filled in later under Settings.
+let setupExtra = [];
+
+async function onSetupImport() {
+  const { ok, result } = await call(() => api.app.ImportServers(t("dialog.importTitle")));
+  if (!ok || !result || !result.length) return;
+  ui.fillSetup(result[0]);
+  setupExtra = result.slice(1);
+  ui.setResult("setup-result", t("setup.imported", [result.length]), "ok");
+  ui.$("setup-password").focus();
+}
+
+async function onSetupSave() {
+  const server = ui.setupServer();
+  if (!server.host) return ui.setResult("setup-result", t("error.hostRequired"), "error");
+  if (!server.name) server.name = server.host;
+
+  const { ok } = await call(() =>
+    api.app.SaveConfig({ servers: [server, ...setupExtra], default: server.name })
+  );
+  if (!ok) return;
+  setupExtra = [];
+  ui.showSetup(false);
+  await startSession();
+}
+
+/** Everything that only makes sense once a server is configured. */
+async function startSession() {
+  await refreshServerSelect();
+  await poll();
+  await loadMaps();
+  renderAll({ rebuildMaps: true });
+  onRefreshServerInfo();
+  schedulePolling();
+}
+
 // ---- Wiring ----
 
-function bindField(id, apply) {
+function bindField(id, apply, relist = false) {
   ui.$(id).oninput = () => {
     const server = draft.servers[draftIndex];
-    if (server) apply(server, ui.$(id).value);
+    if (!server) return;
+    apply(server, ui.$(id).value);
+    if (relist) ui.renderSettingsList(draft, draftIndex, selectDraft);
   };
 }
 
 function wireEvents() {
-  ui.$("btn-settings").onclick = openSettings;
+  ui.$("btn-settings").onclick = () => openSettings();
+  ui.$("btn-server-add").onclick = () => openSettings({ addNew: true });
+  ui.$("btn-cancel-settings").onclick = () => ui.$("settings-dialog").close();
   ui.$("btn-save-settings").onclick = saveSettings;
   ui.$("btn-srv-add").onclick = addServer;
   ui.$("btn-srv-remove").onclick = removeServer;
+  ui.$("btn-srv-import").onclick = onImportServers;
+  ui.$("btn-srv-export").onclick = onExportServer;
+  ui.$("btn-srv-test").onclick = onTestSettingsServer;
 
-  ui.$("srv-list").onchange = () => {
-    draftIndex = parseInt(ui.$("srv-list").value, 10);
-    ui.renderSettingsFields(draft, draftIndex);
+  ui.$("btn-setup-import").onclick = onSetupImport;
+  ui.$("btn-setup-save").onclick = onSetupSave;
+  ui.$("btn-setup-test").onclick = () => {
+    const s = ui.setupServer();
+    testConnection(s.host, s.port, s.password, "setup-result");
   };
+  ui.$("setup-language").onchange = async (e) => {
+    await call(() => api.app.SetLanguage(e.target.value));
+    setLanguage(e.target.value);
+    applyTranslations();
+  };
+
   ui.$("cfg-name").oninput = () => {
     const server = draft.servers[draftIndex];
     if (!server) return;
     if (server.name === draft.default) draft.default = ui.$("cfg-name").value;
     server.name = ui.$("cfg-name").value;
-    ui.renderSettingsList(draft, draftIndex);
+    ui.renderSettingsList(draft, draftIndex, selectDraft);
   };
-  bindField("cfg-host", (s, v) => (s.host = v.trim()));
-  bindField("cfg-port", (s, v) => (s.port = parseInt(v, 10) || 27015));
+  bindField("cfg-host", (s, v) => (s.host = v.trim()), true);
+  bindField("cfg-port", (s, v) => (s.port = parseInt(v, 10) || 27015), true);
   bindField("cfg-password", (s, v) => (s.password = v));
   bindField("cfg-collection", (s, v) => (s.collectionId = v.trim()));
   ui.$("cfg-default").onchange = () => {
@@ -299,7 +437,7 @@ function wireEvents() {
     if (!server) return;
     if (ui.$("cfg-default").checked) draft.default = server.name;
     else if (draft.default === server.name) draft.default = "";
-    ui.renderSettingsList(draft, draftIndex);
+    ui.renderSettingsList(draft, draftIndex, selectDraft);
   };
   ui.$("cfg-sticky").onchange = () => {
     const server = draft.servers[draftIndex];
@@ -381,7 +519,8 @@ function wireEvents() {
 async function init() {
   await api.ready();
 
-  setLanguage(await api.app.GetLanguage().catch(() => ""));
+  const languagePref = await api.app.GetLanguage().catch(() => "");
+  setLanguage(languagePref);
   applyTranslations();
 
   [state.presets, state.toggles] = await Promise.all([
@@ -392,17 +531,16 @@ async function init() {
   wireEvents();
   renderAll();
   setInterval(ui.renderWarmupButton, 1000);
-  await refreshServerSelect();
 
   const config = await api.app.GetConfig();
   if (!(config.servers || []).length) {
-    openSettings();
+    // Nothing to manage yet: the setup screen covers the app until there is.
+    ui.renderLanguageSelect("setup-language", languagePref);
+    ui.showSetup(true);
+    ui.$("setup-host").focus();
     return;
   }
-  await poll();
-  await loadMaps();
-  onRefreshServerInfo();
-  schedulePolling();
+  await startSession();
 }
 
 init().catch((err) => {

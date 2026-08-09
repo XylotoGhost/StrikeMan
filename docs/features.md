@@ -93,12 +93,60 @@ Version and build, uptime, and an update check against Steam's own
 "is this build current" endpoint — so an outdated server is visible before
 match night rather than during it.
 
-## Multiple servers and languages
+## Servers
 
-Servers are configured in ⚙ with one marked as the default; a switcher appears
-in the header once you have more than one. RCON passwords live in the
-operating system's credential store (Windows Credential Manager, macOS
-Keychain, Linux Secret Service), not in the config file.
+### First launch
+
+With nothing configured yet there is nothing to manage, so StrikeMan opens on a
+setup screen instead of an empty app: pick a language, type in the server, and
+press **Test connection** before committing to it. The test only runs `status`,
+which reads, so pressing it during a live match is harmless. **Import from a
+file…** fills the same form from a server file (below).
+
+### Switching and adding
+
+The server the whole window acts on is picked from the dropdown at the top of
+the app, with **+** next to it to add another. Everything that is not "which
+server" lives behind **⚙ Settings**: the server list, per-server details, and
+the language.
+
+One server is marked as the default (★) and is the one selected at start-up.
+
+RCON passwords live in the operating system's credential store (Windows
+Credential Manager, macOS Keychain, Linux Secret Service), not in the config
+file.
+
+### Import and export
+
+**Export…** writes the selected server to a small JSON file, and **Import…**
+reads one back. It carries the name, address, port, workshop collection, warmup
+length and admin-toggle preferences — **never the password**, which the person
+importing types in themselves. That is what makes the file safe to send to
+whoever else is administering the server.
+
+```json
+{
+  "format": 1,
+  "app": "StrikeMan",
+  "exported": "2026-08-09T18:12:00Z",
+  "servers": [
+    {
+      "name": "Mylo Gaming | CS2 Server",
+      "host": "192.168.178.66",
+      "port": 27016,
+      "collectionId": "3070284539"
+    }
+  ]
+}
+```
+
+The password is not omitted at write time — the exported type has no field for
+one, so it cannot leak even if the stored settings grow. A file may hold several
+servers, and StrikeMan's own `config.json` imports too (its passwords are
+dropped on the way in). Names that already exist are suffixed rather than
+overwritten, so an import never destroys a configured server.
+
+## Languages
 
 The interface follows your operating system's language, with English and
 German available and an override in settings.

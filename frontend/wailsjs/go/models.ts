@@ -54,6 +54,30 @@ export namespace app {
 	        this.bot = source["bot"];
 	    }
 	}
+	export class PortableServer {
+	    name: string;
+	    host: string;
+	    port: number;
+	    collectionId?: string;
+	    stickyAdmin?: boolean;
+	    sticky?: Record<string, boolean>;
+	    warmupSeconds?: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new PortableServer(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.host = source["host"];
+	        this.port = source["port"];
+	        this.collectionId = source["collectionId"];
+	        this.stickyAdmin = source["stickyAdmin"];
+	        this.sticky = source["sticky"];
+	        this.warmupSeconds = source["warmupSeconds"];
+	    }
+	}
 	export class Preset {
 	    id: string;
 	    nameKey: string;
