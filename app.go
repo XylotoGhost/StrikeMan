@@ -94,20 +94,29 @@ func (a *App) server() (Server, bool) {
 
 // ---- Logging ----
 
+// emit publishes an event to the frontend. Without a UI context — before
+// start-up, or when driven from a test — there is nowhere to send it.
+func (a *App) emit(name string, data any) {
+	if a.ctx == nil {
+		return
+	}
+	runtime.EventsEmit(a.ctx, name, data)
+}
+
 // log sends a raw line to the console card. Used for RCON echoes, which are
 // server output and stay untranslated.
 func (a *App) log(format string, args ...any) {
-	runtime.EventsEmit(a.ctx, "log", fmt.Sprintf(format, args...))
+	a.emit("log", fmt.Sprintf(format, args...))
 }
 
 // logKey sends a translatable message: the frontend formats key with args.
 func (a *App) logKey(key string, args ...string) {
-	runtime.EventsEmit(a.ctx, "logkey", localized{Key: key, Args: args})
+	a.emit("logkey", localized{Key: key, Args: args})
 }
 
 // warnKey is logKey plus an error toast.
 func (a *App) warnKey(key string, args ...string) {
-	runtime.EventsEmit(a.ctx, "warnkey", localized{Key: key, Args: args})
+	a.emit("warnkey", localized{Key: key, Args: args})
 }
 
 type localized struct {

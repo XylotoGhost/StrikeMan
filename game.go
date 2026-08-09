@@ -11,8 +11,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // ---- Maps ----
@@ -267,7 +265,7 @@ func (a *App) startWarmup(seconds int) error {
 		"mp_warmup_start",
 	)
 	if err == nil {
-		runtime.EventsEmit(a.ctx, "warmup", seconds)
+		a.emit("warmup", seconds)
 	}
 	return err
 }
