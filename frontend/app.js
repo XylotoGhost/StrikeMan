@@ -14,6 +14,7 @@ let userPickedMap = false; // user chose a map; stop following the current one
 let paused = false; // no readable pause state in CS2, so track it here
 let toggles = []; // toggle definitions from the backend
 let currentServer = null; // active server config, for the sticky markers
+let warmupFieldFor = null; // server whose warmup length is in the input
 // CS2 reports no warmup state over RCON either, so StrikeMan tracks when the
 // warmup it started (or a map load implies) will end.
 let warmupEndsAt = null;
@@ -107,6 +108,11 @@ function activePresetId(st) {
 
 async function refreshStatus() {
   currentServer = await App.GetActiveServerConfig().catch(() => null);
+  // Load the stored warmup length once per server, so typing is not overwritten.
+  if (currentServer && currentServer.name !== warmupFieldFor) {
+    warmupFieldFor = currentServer.name;
+    $("warmup-seconds").value = currentServer.warmupSeconds || 120;
+  }
   const st = await App.GetStatus().catch(() => null);
   const online = st && st.connected;
   $("status-dot").className = "dot " + (online ? "online" : "offline");
@@ -135,8 +141,10 @@ async function refreshStatus() {
     paused = false; // a map change clears any pause
     updatePauseButton();
     modeChanged = true;
-    // CS2 always warms up after loading a map, so infer the warmup that is
-    // now running rather than showing nothing. This is StrikeMan's estimate.
+    // A map load restarts warmup. When StrikeMan triggered the map change it
+    // starts the warmup itself and reports the exact length (the "warmup"
+    // event below); this only covers a map change made elsewhere, where the
+    // length is CS2's and can still be cut short once everyone connects.
     if (!firstStatus && st.warmupOnline === 1 && st.humans > 0 && st.warmupTime > 0) {
       warmupEndsAt = Date.now() + st.warmupTime * 1000;
     } else {
@@ -372,8 +380,8 @@ async function toggleWarmup() {
     if (!(await confirmIfBusy("Start warmup?", `${lastStatus.humans} player(s) are on the server. Starting warmup interrupts the running match.`)))
       return;
     const seconds = parseInt($("warmup-seconds").value, 10) || 120;
-    const ok = await action(() => App.StartWarmup(seconds), "Warmup started");
-    if (ok !== undefined) warmupEndsAt = Date.now() + seconds * 1000;
+    await action(() => App.StartWarmup(seconds), "Warmup started");
+    // warmupEndsAt is set by the "warmup" event the backend emits.
   }
   updateWarmupButton();
 }
@@ -558,6 +566,9 @@ function wireEvents() {
   $("btn-refreshmaps").onclick = refreshMaps;
 
   $("btn-warmup").onclick = toggleWarmup;
+  // Remember the warmup length: map loads start a warmup of this length too.
+  $("warmup-seconds").onchange = () =>
+    call(() => App.SetWarmupSeconds(parseInt($("warmup-seconds").value, 10) || 120));
   $("btn-pause").onclick = togglePause;
   $("btn-restart").onclick = async () => {
     if (!(await confirmAction("Restart the match?", "This resets the score to 0:0 and starts the match from round 1."))) return;
@@ -604,6 +615,11 @@ function wireEvents() {
   window.runtime.EventsOn("warn", (msg) => {
     toast(msg, true);
     logLine("⚠ " + msg);
+  });
+  // The backend starts warmup after a map load too, and tells us its length.
+  window.runtime.EventsOn("warmup", (seconds) => {
+    warmupEndsAt = Date.now() + seconds * 1000;
+    updateWarmupButton();
   });
 }
 

@@ -48,6 +48,8 @@ export function SetTeamNames(arg1:string,arg2:string):Promise<void>;
 
 export function SetToggle(arg1:string,arg2:boolean):Promise<void>;
 
+export function SetWarmupSeconds(arg1:number):Promise<void>;
+
 export function StartWarmup(arg1:number):Promise<void>;
 
 export function SwapTeams():Promise<void>;

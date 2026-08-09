@@ -418,6 +418,24 @@ func (a *App) runAfterMapLoad(p *Preset) {
 		}
 		// Sticky toggles run last so they win over the preset's rules.
 		a.restoreSticky()
+
+		// CS2 starts its own warmup after a map load, but with the
+		// all-players-connected shortcut still active and whatever length
+		// the config left behind. Redo it on our terms so a map change and
+		// the warmup button behave identically — and only when people are
+		// actually on the server, since CS2 skips warmup otherwise.
+		// Players take a moment to come back after a changelevel, so give
+		// them a few seconds to reappear before deciding nobody is here.
+		for attempt := 0; attempt < 3; attempt++ {
+			if a.GetStatus().Humans > 0 {
+				if s := a.config.serverByName(a.active); s != nil {
+					a.startWarmup(s.Warmup())
+				}
+				break
+			}
+			time.Sleep(4 * time.Second)
+		}
+
 		if p == nil {
 			return
 		}
@@ -460,17 +478,39 @@ func (a *App) restoreSticky() {
 
 // ---- Match control ----
 
-// StartWarmup runs a warmup of exactly the requested length. CS2 would
+// StartWarmup runs a warmup and remembers the length for the next map load.
+func (a *App) StartWarmup(seconds int) error {
+	a.SetWarmupSeconds(seconds)
+	return a.startWarmup(seconds)
+}
+
+// SetWarmupSeconds stores the warmup length so it survives a restart and is
+// available when a map load starts warmup on its own.
+func (a *App) SetWarmupSeconds(seconds int) error {
+	s := a.config.serverByName(a.active)
+	if s == nil || seconds <= 0 || s.WarmupSeconds == seconds {
+		return nil
+	}
+	s.WarmupSeconds = seconds
+	return a.config.Save()
+}
+
+// startWarmup runs a warmup of exactly the requested length. CS2 would
 // otherwise cut it short once everyone has connected
 // (mp_warmuptime_all_players_connected), which would make StrikeMan's
-// countdown lie, so that shortcut is disabled first.
-func (a *App) StartWarmup(seconds int) error {
-	return a.execAll(
+// countdown lie, so that shortcut is disabled first. The frontend is told
+// how long the warmup is rather than having to guess.
+func (a *App) startWarmup(seconds int) error {
+	err := a.execAll(
 		"mp_warmuptime_all_players_connected 0",
 		"mp_warmup_pausetimer 0",
 		fmt.Sprintf("mp_warmuptime %d", seconds),
 		"mp_warmup_start",
 	)
+	if err == nil {
+		runtime.EventsEmit(a.ctx, "warmup", seconds)
+	}
+	return err
 }
 
 func (a *App) EndWarmup() error    { return a.execAll("mp_warmup_end") }

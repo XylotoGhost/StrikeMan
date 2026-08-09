@@ -94,6 +94,10 @@ export function SetToggle(arg1, arg2) {
   return window['go']['main']['App']['SetToggle'](arg1, arg2);
 }
 
+export function SetWarmupSeconds(arg1) {
+  return window['go']['main']['App']['SetWarmupSeconds'](arg1);
+}
+
 export function StartWarmup(arg1) {
   return window['go']['main']['App']['StartWarmup'](arg1);
 }

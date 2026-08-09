@@ -26,6 +26,17 @@ type Server struct {
 	// written before this existed defaults to on rather than off.
 	StickyAdmin *bool           `json:"stickyAdmin,omitempty"`
 	Sticky      map[string]bool `json:"sticky,omitempty"`
+	// Warmup length used by the warmup button and after every map load.
+	WarmupSeconds int `json:"warmupSeconds,omitempty"`
+}
+
+const defaultWarmupSeconds = 120
+
+func (s *Server) Warmup() int {
+	if s.WarmupSeconds <= 0 {
+		return defaultWarmupSeconds
+	}
+	return s.WarmupSeconds
 }
 
 func (s *Server) StickyEnabled() bool {

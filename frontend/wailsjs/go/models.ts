@@ -8,6 +8,7 @@ export namespace main {
 	    collectionId: string;
 	    stickyAdmin?: boolean;
 	    sticky?: Record<string, boolean>;
+	    warmupSeconds?: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new Server(source);
@@ -22,6 +23,7 @@ export namespace main {
 	        this.collectionId = source["collectionId"];
 	        this.stickyAdmin = source["stickyAdmin"];
 	        this.sticky = source["sticky"];
+	        this.warmupSeconds = source["warmupSeconds"];
 	    }
 	}
 	export class Config {

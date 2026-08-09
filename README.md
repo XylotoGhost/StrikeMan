@@ -20,7 +20,10 @@ window. No npm, no build pipeline, ~10 source files.
   against Steam, and uptime.
 - **Warmup** — one button that starts a warmup of exactly the length you set and
   turns into "end warmup · go live" with a countdown. Starting it while players
-  are on the server asks first.
+  are on the server asks first. Applying a preset or changing the map starts the
+  same warmup afterwards, so a map change and the button behave identically
+  (skipped when nobody is on the server, which is when CS2 skips warmup too).
+  The length is remembered per server.
 - **Toggles** — friendly fire and overtime follow the preset you apply; the
   admin toggles (auto-kick, kick bans) can be kept across presets and map
   changes per server, marked with a 📌.
@@ -62,9 +65,11 @@ against a live server rather than assumed:
 - **Warmup and pause state.** No convar reports them, so StrikeMan tracks what
   it started itself and shows a countdown. To keep that countdown honest,
   starting a warmup also sets `mp_warmuptime_all_players_connected 0`, which
-  would otherwise cut the warmup short once everyone connects. After a map
-  load StrikeMan infers the warmup CS2 starts on its own; that one is an
-  estimate.
+  would otherwise cut the warmup short once everyone connects — the trade-off
+  is that warmup runs its full length even when everyone is ready, and "go
+  live" ends it. Because StrikeMan also starts the warmup after its own map
+  changes, the countdown is exact there too; only a map change made outside
+  StrikeMan falls back to an estimate.
 - **Bans.** `banid` and `listid` exist but record nothing usable — a ban made
   through them never appears in `listid`, so there is no ban list to show or
   unban from. The kick-ban players actually run into is a timed lockout
