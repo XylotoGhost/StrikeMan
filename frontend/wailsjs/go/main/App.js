@@ -26,6 +26,10 @@ export function GetActiveServer() {
   return window['go']['main']['App']['GetActiveServer']();
 }
 
+export function GetActiveServerConfig() {
+  return window['go']['main']['App']['GetActiveServerConfig']();
+}
+
 export function GetConfig() {
   return window['go']['main']['App']['GetConfig']();
 }
@@ -44,6 +48,10 @@ export function GetServerInfo() {
 
 export function GetStatus() {
   return window['go']['main']['App']['GetStatus']();
+}
+
+export function GetToggles() {
+  return window['go']['main']['App']['GetToggles']();
 }
 
 export function KickBots() {

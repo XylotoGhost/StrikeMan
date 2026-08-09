@@ -6,6 +6,8 @@ export namespace main {
 	    port: number;
 	    password?: string;
 	    collectionId: string;
+	    stickyAdmin?: boolean;
+	    sticky?: Record<string, boolean>;
 	
 	    static createFrom(source: any = {}) {
 	        return new Server(source);
@@ -18,6 +20,8 @@ export namespace main {
 	        this.port = source["port"];
 	        this.password = source["password"];
 	        this.collectionId = source["collectionId"];
+	        this.stickyAdmin = source["stickyAdmin"];
+	        this.sticky = source["sticky"];
 	    }
 	}
 	export class Config {
@@ -179,9 +183,9 @@ export namespace main {
 	    limitTeams: number;
 	    maxRounds: number;
 	    version: string;
-	    friendlyFire: number;
-	    overtime: number;
-	    autokick: number;
+	    toggles: Record<string, number>;
+	    warmupTime: number;
+	    warmupOnline: number;
 	    players: Player[];
 	
 	    static createFrom(source: any = {}) {
@@ -201,9 +205,9 @@ export namespace main {
 	        this.limitTeams = source["limitTeams"];
 	        this.maxRounds = source["maxRounds"];
 	        this.version = source["version"];
-	        this.friendlyFire = source["friendlyFire"];
-	        this.overtime = source["overtime"];
-	        this.autokick = source["autokick"];
+	        this.toggles = source["toggles"];
+	        this.warmupTime = source["warmupTime"];
+	        this.warmupOnline = source["warmupOnline"];
 	        this.players = this.convertValues(source["players"], Player);
 	    }
 	
@@ -224,6 +228,26 @@ export namespace main {
 		    }
 		    return a;
 		}
+	}
+	export class Toggle {
+	    id: string;
+	    label: string;
+	    hint: string;
+	    admin: boolean;
+	    cvar: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Toggle(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.label = source["label"];
+	        this.hint = source["hint"];
+	        this.admin = source["admin"];
+	        this.cvar = source["cvar"];
+	    }
 	}
 
 }

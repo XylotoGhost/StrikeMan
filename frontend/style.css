@@ -154,10 +154,14 @@ button.danger { background: transparent; color: var(--danger); border: 1px solid
 button.danger:hover { background: var(--danger); color: #1a0a08; }
 
 /* switches */
-.switches { gap: 16px; }
+.switches { gap: 14px; }
+.switch-label { white-space: nowrap; }
+.pin { font-size: 11px; opacity: 0.85; }
 .switch { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; color: var(--text); }
 .switch input { display: none; }
-.switch span {
+/* Only the span right after the checkbox is the knob — the label and the
+   sticky pin are spans too. */
+.switch input + span {
   width: 34px;
   height: 18px;
   border-radius: 99px;
@@ -167,7 +171,7 @@ button.danger:hover { background: var(--danger); color: #1a0a08; }
   transition: background 0.15s;
   flex-shrink: 0;
 }
-.switch span::after {
+.switch input + span::after {
   content: "";
   position: absolute;
   top: 2px;

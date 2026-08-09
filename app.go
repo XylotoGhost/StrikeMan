@@ -24,15 +24,23 @@ type App struct {
 	canBatch *bool         // whether the server accepts semicolon-batched commands
 	workshop []WorkshopMap // last fetched workshop list, for tag lookups
 	build    int           // server build number from `status`, for the update check
+	// last time each sticky toggle was re-applied, to throttle enforcement
+	lastEnforce map[string]time.Time
 }
 
 func NewApp() *App {
-	return &App{}
+	return &App{lastEnforce: map[string]time.Time{}}
 }
 
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
-	a.config = LoadConfig()
+	cfg, err := LoadConfig()
+	if err != nil {
+		// Never silently fall back to "no servers configured": that looks
+		// like the settings vanished.
+		a.warn("%v", err)
+	}
+	a.config = cfg
 	a.active = a.config.Default
 	if a.config.serverByName(a.active) == nil && len(a.config.Servers) > 0 {
 		a.active = a.config.Servers[0].Name
@@ -93,6 +101,14 @@ func (a *App) GetActiveServer() string {
 	return a.active
 }
 
+// GetActiveServerConfig lets the UI show which admin toggles are being kept.
+func (a *App) GetActiveServerConfig() Server {
+	if s := a.config.serverByName(a.active); s != nil {
+		return *s
+	}
+	return Server{}
+}
+
 func (a *App) SelectServer(name string) error {
 	if a.config.serverByName(name) == nil {
 		return fmt.Errorf("unknown server %q", name)
@@ -130,11 +146,11 @@ type Status struct {
 	LimitTeams int      `json:"limitTeams"`
 	MaxRounds  int      `json:"maxRounds"`
 	Version    string   `json:"version"`
-	// Toggles: -1 unknown, 0 off, 1 on.
-	FriendlyFire int      `json:"friendlyFire"`
-	Overtime     int      `json:"overtime"`
-	Autokick     int      `json:"autokick"`
-	Players      []Player `json:"players"`
+	// Toggle states by toggle ID: -1 unknown, 0 off, 1 on.
+	Toggles      map[string]int `json:"toggles"`
+	WarmupTime   int            `json:"warmupTime"`
+	WarmupOnline int            `json:"warmupOnline"`
+	Players      []Player       `json:"players"`
 }
 
 var (
@@ -145,28 +161,45 @@ var (
 	reGameType   = regexp.MustCompile(`game_type = (\d+)`)
 	reGameMode   = regexp.MustCompile(`game_mode = (\d+)`)
 	reLimitTeams = regexp.MustCompile(`mp_limitteams = (\d+)`)
-	reMaxRounds  = regexp.MustCompile(`mp_maxrounds = (\d+)`)
-	reVersion    = regexp.MustCompile(`(?m)^version\s*:\s*(\S+?)/(\d+)`)
+	reMaxRounds   = regexp.MustCompile(`mp_maxrounds = (\d+)`)
+	reWarmupTime  = regexp.MustCompile(`mp_warmuptime = (\d+)`)
+	reVersion     = regexp.MustCompile(`(?m)^version\s*:\s*(\S+?)/(\d+)`)
+	reCvarPattern = map[string]*regexp.Regexp{}
 )
 
-const modeConvars = "game_type; game_mode; mp_limitteams; mp_maxrounds; " + toggleConvars
+// modeConvars is the batch queried alongside `status` on every poll.
+func modeConvars() string {
+	parts := []string{"game_type", "game_mode", "mp_limitteams", "mp_maxrounds",
+		"mp_warmuptime", "mp_warmup_online_enabled"}
+	for _, t := range Toggles {
+		parts = append(parts, t.Cvar)
+	}
+	return strings.Join(parts, "; ")
+}
 
-// Toggles exposed as switches in the UI; also the allowlist for SetToggle.
-var toggleCvars = []string{"mp_friendlyfire", "mp_overtime_enable", "mp_autokick"}
-
-const toggleConvars = "mp_friendlyfire; mp_overtime_enable; mp_autokick"
-
-// readToggle finds "<cvar> = true|false|1|0" in RCON output.
-// Returns -1 when the convar isn't present.
+// readToggle finds "<cvar> = value" in RCON output. Booleans and numbers both
+// count: sv_kick_ban_duration is minutes, where anything above 0 means "on".
+// Returns -1 when the convar isn't in the output.
 func readToggle(out, cvar string) int {
-	m := regexp.MustCompile(cvar + ` = (\w+)`).FindStringSubmatch(out)
+	re, ok := reCvarPattern[cvar]
+	if !ok {
+		re = regexp.MustCompile(regexp.QuoteMeta(cvar) + ` = (\S+)`)
+		reCvarPattern[cvar] = re
+	}
+	m := re.FindStringSubmatch(out)
 	if m == nil {
 		return -1
 	}
 	switch strings.ToLower(m[1]) {
-	case "true", "1":
+	case "true":
 		return 1
-	case "false", "0":
+	case "false":
+		return 0
+	}
+	if n, err := strconv.Atoi(m[1]); err == nil {
+		if n > 0 {
+			return 1
+		}
 		return 0
 	}
 	return -1
@@ -176,10 +209,12 @@ func readToggle(out, cvar string) int {
 // round trip is attempted once; if the server doesn't split on semicolons,
 // the convars are queried separately from then on.
 func (a *App) GetStatus() Status {
-	st := Status{GameType: -1, GameMode: -1, LimitTeams: -1, Players: []Player{}}
+	st := Status{GameType: -1, GameMode: -1, LimitTeams: -1,
+		Players: []Player{}, Toggles: map[string]int{}}
+	convars := modeConvars()
 	cmd := "status"
 	if a.canBatch == nil || *a.canBatch {
-		cmd = "status; " + modeConvars
+		cmd = "status; " + convars
 	}
 	out, err := a.exec(cmd)
 	if err != nil {
@@ -191,7 +226,7 @@ func (a *App) GetStatus() Status {
 		a.canBatch = &ok
 	}
 	if !*a.canBatch {
-		if extra, err := a.exec(modeConvars); err == nil {
+		if extra, err := a.exec(convars); err == nil {
 			out += "\n" + extra
 		}
 	}
@@ -223,9 +258,13 @@ func (a *App) GetStatus() Status {
 		st.Version = m[1]
 		a.build, _ = strconv.Atoi(m[2])
 	}
-	st.FriendlyFire = readToggle(out, "mp_friendlyfire")
-	st.Overtime = readToggle(out, "mp_overtime_enable")
-	st.Autokick = readToggle(out, "mp_autokick")
+	if m := reWarmupTime.FindStringSubmatch(out); m != nil {
+		st.WarmupTime, _ = strconv.Atoi(m[1])
+	}
+	st.WarmupOnline = readToggle(out, "mp_warmup_online_enabled")
+	for _, t := range Toggles {
+		st.Toggles[t.ID] = readToggle(out, t.Cvar)
+	}
 	for _, line := range strings.Split(out, "\n") {
 		m := rePlayerLine.FindStringSubmatch(line)
 		if m == nil || m[1] == "65535" || m[4] != "active" {
@@ -238,6 +277,7 @@ func (a *App) GetStatus() Status {
 			Bot:    m[2] == "BOT" || m[5] == "BOT",
 		})
 	}
+	a.enforceSticky(st.Toggles)
 	return st
 }
 
@@ -304,6 +344,14 @@ func (a *App) checkWingmanMap(mapRef string, workshop bool) error {
 
 // ChangeMap loads an official map name or a workshop file ID.
 func (a *App) ChangeMap(ref string, workshop bool) error {
+	if err := a.changeMap(ref, workshop); err != nil {
+		return err
+	}
+	go a.runAfterMapLoad(nil) // the new map resets sticky toggles
+	return nil
+}
+
+func (a *App) changeMap(ref string, workshop bool) error {
 	cmd := "changelevel " + ref
 	if workshop {
 		cmd = "host_workshop_map " + ref
@@ -344,7 +392,7 @@ func (a *App) ApplyPreset(id, mapRef string, workshop bool) error {
 			return err
 		}
 	}
-	if err := a.ChangeMap(mapRef, workshop); err != nil {
+	if err := a.changeMap(mapRef, workshop); err != nil {
 		return err
 	}
 	go a.runAfterMapLoad(p)
@@ -352,34 +400,77 @@ func (a *App) ApplyPreset(id, mapRef string, workshop bool) error {
 }
 
 // runAfterMapLoad waits until the server answers again after a map change,
-// sends the preset's post-load commands and verifies the mode actually
-// applied (the server falls back when a map doesn't support the mode).
+// then applies the preset's match rules and re-applies sticky admin toggles,
+// because loading a map re-runs the gamemode config and resets both. With a
+// nil preset it only restores the sticky toggles (plain map change).
 func (a *App) runAfterMapLoad(p *Preset) {
 	time.Sleep(5 * time.Second)
 	for i := 0; i < 12; i++ {
-		if _, err := a.exec("echo strikeman-ready"); err == nil {
+		if _, err := a.exec("echo strikeman-ready"); err != nil {
+			time.Sleep(5 * time.Second)
+			continue
+		}
+		if p != nil {
 			for _, cmd := range p.PostCommands {
 				a.exec(cmd)
 				a.log("> %s", cmd)
 			}
-			if out, err := a.exec("game_mode"); err == nil {
-				if m := reGameMode.FindStringSubmatch(out); m != nil && m[1] != strconv.Itoa(p.ExpectedMode) {
-					a.warn("The map does not support %s — the server fell back to another mode (game_mode = %s).", p.Name, m[1])
-					return
-				}
-			}
-			a.log("Preset %s fully applied.", p.Name)
+		}
+		// Sticky toggles run last so they win over the preset's rules.
+		a.restoreSticky()
+		if p == nil {
 			return
 		}
-		time.Sleep(5 * time.Second)
+		if out, err := a.exec("game_mode"); err == nil {
+			if m := reGameMode.FindStringSubmatch(out); m != nil && m[1] != strconv.Itoa(p.ExpectedMode) {
+				a.warn("The map does not support %s — the server fell back to another mode (game_mode = %s).", p.Name, m[1])
+				return
+			}
+		}
+		a.log("Preset %s fully applied.", p.Name)
+		return
 	}
-	a.log("Preset %s: server did not come back in time, post commands skipped.", p.Name)
+	if p != nil {
+		a.log("Preset %s: server did not come back in time, post commands skipped.", p.Name)
+	}
+}
+
+// restoreSticky re-sends every remembered admin toggle without waiting for
+// drift to show up in a poll.
+func (a *App) restoreSticky() {
+	s := a.config.serverByName(a.active)
+	if s == nil || !s.StickyEnabled() {
+		return
+	}
+	for id, want := range s.Sticky {
+		t := toggleByID(id)
+		if t == nil {
+			continue
+		}
+		cmds, state := t.Off, "off"
+		if want {
+			cmds, state = t.On, "on"
+		}
+		if err := a.execAll(cmds...); err == nil {
+			a.log("Kept %q %s.", t.Label, state)
+		}
+		a.lastEnforce[id] = time.Now()
+	}
 }
 
 // ---- Match control ----
 
+// StartWarmup runs a warmup of exactly the requested length. CS2 would
+// otherwise cut it short once everyone has connected
+// (mp_warmuptime_all_players_connected), which would make StrikeMan's
+// countdown lie, so that shortcut is disabled first.
 func (a *App) StartWarmup(seconds int) error {
-	return a.execAll(fmt.Sprintf("mp_warmuptime %d", seconds), "mp_warmup_start")
+	return a.execAll(
+		"mp_warmuptime_all_players_connected 0",
+		"mp_warmup_pausetimer 0",
+		fmt.Sprintf("mp_warmuptime %d", seconds),
+		"mp_warmup_start",
+	)
 }
 
 func (a *App) EndWarmup() error    { return a.execAll("mp_warmup_end") }
@@ -409,16 +500,63 @@ func (a *App) KickBots() error { return a.execAll("bot_kick") }
 
 // ---- Toggles, announcements ----
 
-// SetToggle flips one of the convars backing the UI switches.
-func (a *App) SetToggle(cvar string, on bool) error {
-	if !contains(toggleCvars, cvar) {
-		return fmt.Errorf("%q is not a toggle", cvar)
+func (a *App) GetToggles() []Toggle { return Toggles }
+
+// SetToggle flips a switch. Admin toggles are remembered per server (when
+// sticky is enabled) so a map load or preset cannot quietly undo them.
+func (a *App) SetToggle(id string, on bool) error {
+	t := toggleByID(id)
+	if t == nil {
+		return fmt.Errorf("%q is not a toggle", id)
 	}
-	value := "0"
+	cmds := t.Off
 	if on {
-		value = "1"
+		cmds = t.On
 	}
-	return a.execAll(cvar + " " + value)
+	if err := a.execAll(cmds...); err != nil {
+		return err
+	}
+	if s := a.config.serverByName(a.active); t.Admin && s != nil && s.StickyEnabled() {
+		if s.Sticky == nil {
+			s.Sticky = map[string]bool{}
+		}
+		s.Sticky[id] = on
+		return a.config.Save()
+	}
+	return nil
+}
+
+// enforceSticky re-applies remembered admin toggles when the server has
+// drifted from them — after a map load, a preset, or anything else that
+// re-runs the gamemode config. Throttled so a convar that refuses to stick
+// cannot spam the server or the log.
+func (a *App) enforceSticky(observed map[string]int) {
+	s := a.config.serverByName(a.active)
+	if s == nil || !s.StickyEnabled() || len(s.Sticky) == 0 {
+		return
+	}
+	for id, want := range s.Sticky {
+		t := toggleByID(id)
+		if t == nil {
+			continue
+		}
+		is, known := observed[id]
+		if !known || is < 0 || (is == 1) == want {
+			continue
+		}
+		if time.Since(a.lastEnforce[id]) < 20*time.Second {
+			continue
+		}
+		a.lastEnforce[id] = time.Now()
+		cmds := t.Off
+		state := "off"
+		if want {
+			cmds, state = t.On, "on"
+		}
+		if err := a.execAll(cmds...); err == nil {
+			a.log("Kept %q %s (server had reset it).", t.Label, state)
+		}
+	}
 }
 
 // Announce prints a message in every player's chat.

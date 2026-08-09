@@ -18,7 +18,18 @@ window. No npm, no build pipeline, ~10 source files.
   configure. Workshop maps load via `host_workshop_map`.
 - **Server info** — version plus an "is a server update available?" check
   against Steam, and uptime.
-- **Quick toggles** — friendly fire, overtime, AFK/TK auto-kick.
+- **Warmup** — one button that starts a warmup of exactly the length you set and
+  turns into "end warmup · go live" with a countdown. Starting it while players
+  are on the server asks first.
+- **Toggles** — friendly fire and overtime follow the preset you apply; the
+  admin toggles (auto-kick, kick bans) can be kept across presets and map
+  changes per server, marked with a 📌.
+- **No accidental team-damage bans** — turning off *Auto-kick* stops kicks for
+  team damage/idling (`mp_autokick`, `mp_spawnprotectiontime`), and turning off
+  *Kicked players banned 15 min* lets a kicked player rejoin at once
+  (`sv_kick_ban_duration`, `sv_vote_kick_ban_duration`). Because loading a map
+  re-runs the game mode config and turns these back on, StrikeMan re-applies
+  them afterwards when the sticky setting is enabled.
 - **Announcements** — broadcast a chat message to everyone on the server.
 - **Confirmations** — disruptive actions (map/mode change, swap, scramble,
   going live) ask first while players are on the server; kicking and
@@ -30,17 +41,34 @@ window. No npm, no build pipeline, ~10 source files.
     no overtime limit) so a 12:12 is played out. Note that Valve's Premier
     also means map veto and CS Rating, which are matchmaking-only and cannot
     exist on a private server — this is the ruleset, not the matchmaking.
-  - *Wingman 2v2* — `game_type 0`, `game_mode 2`
+  - *Wingman 2v2* — `game_type 0`, `game_mode 2`. MR8 with overtime on, which
+    is what the server's own wingman config sets (checked over RCON).
   - *Wingman 3v3* — wingman rules and maps with 3 players per team:
     after the map reload it sets `mp_limitteams 0` and `mp_autoteambalance 0`,
     which lifts the 2-per-team limit (verified against a live CS2 server by
     putting 3+ bots on each team).
-- **Match control** — warmup timer (start/end), pause / unpause, restart round.
+- **Match control** — warmup toggle, pause / resume, restart match.
 - **Teams** — swap sides, scramble, set team names, add/kick bots,
   kick individual players.
   (Vanilla CS2 has no RCON command to force a specific player onto a team —
   that would need a server plugin such as CounterStrikeSharp.)
 - **Console** — free-text RCON console with output, as an escape hatch.
+
+## What CS2 does not expose over RCON
+
+Two things StrikeMan deliberately does not pretend to know, both checked
+against a live server rather than assumed:
+
+- **Warmup and pause state.** No convar reports them, so StrikeMan tracks what
+  it started itself and shows a countdown. To keep that countdown honest,
+  starting a warmup also sets `mp_warmuptime_all_players_connected 0`, which
+  would otherwise cut the warmup short once everyone connects. After a map
+  load StrikeMan infers the warmup CS2 starts on its own; that one is an
+  estimate.
+- **Bans.** `banid` and `listid` exist but record nothing usable — a ban made
+  through them never appears in `listid`, so there is no ban list to show or
+  unban from. The kick-ban players actually run into is a timed lockout
+  controlled by `sv_kick_ban_duration`; turn that toggle off instead.
 
 ## No live scoreboard
 

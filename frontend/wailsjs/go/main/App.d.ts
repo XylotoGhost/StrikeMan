@@ -14,6 +14,8 @@ export function EndWarmup():Promise<void>;
 
 export function GetActiveServer():Promise<string>;
 
+export function GetActiveServerConfig():Promise<main.Server>;
+
 export function GetConfig():Promise<main.Config>;
 
 export function GetMaps():Promise<main.MapList>;
@@ -23,6 +25,8 @@ export function GetPresets():Promise<Array<main.Preset>>;
 export function GetServerInfo():Promise<main.ServerInfo>;
 
 export function GetStatus():Promise<main.Status>;
+
+export function GetToggles():Promise<Array<main.Toggle>>;
 
 export function KickBots():Promise<void>;
 

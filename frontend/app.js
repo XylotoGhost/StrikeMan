@@ -12,6 +12,11 @@ let selectedMode = null; // preset id the user intends to play, not what runs
 let userPickedMode = false; // user chose a mode; stop following the server's
 let userPickedMap = false; // user chose a map; stop following the current one
 let paused = false; // no readable pause state in CS2, so track it here
+let toggles = []; // toggle definitions from the backend
+let currentServer = null; // active server config, for the sticky markers
+// CS2 reports no warmup state over RCON either, so StrikeMan tracks when the
+// warmup it started (or a map load implies) will end.
+let warmupEndsAt = null;
 let busyCount = 0;
 
 // ---------- helpers ----------
@@ -94,12 +99,14 @@ function isWingmanMode(st) {
 // Premier and Competitive share game_mode 1 and differ only in overtime.
 function activePresetId(st) {
   if (!st || !st.connected || st.gameType !== 0) return null;
-  if (st.gameMode === 1) return st.overtime === 1 ? "premier" : "competitive";
+  const overtime = st.toggles ? st.toggles.overtime : -1;
+  if (st.gameMode === 1) return overtime === 1 ? "premier" : "competitive";
   if (st.gameMode === 2) return st.limitTeams === 0 ? "wingman3v3" : "wingman";
   return null;
 }
 
 async function refreshStatus() {
+  currentServer = await App.GetActiveServerConfig().catch(() => null);
   const st = await App.GetStatus().catch(() => null);
   const online = st && st.connected;
   $("status-dot").className = "dot " + (online ? "online" : "offline");
@@ -128,6 +135,14 @@ async function refreshStatus() {
     paused = false; // a map change clears any pause
     updatePauseButton();
     modeChanged = true;
+    // CS2 always warms up after loading a map, so infer the warmup that is
+    // now running rather than showing nothing. This is StrikeMan's estimate.
+    if (!firstStatus && st.warmupOnline === 1 && st.humans > 0 && st.warmupTime > 0) {
+      warmupEndsAt = Date.now() + st.warmupTime * 1000;
+    } else {
+      warmupEndsAt = null;
+    }
+    updateWarmupButton();
   }
   if (modeChanged) rebuildMapSelect();
 }
@@ -145,12 +160,46 @@ function renderNowLine() {
   $("now-line").textContent = `Now running: ${modeName} on ${st.map || "?"}${rounds}`;
 }
 
+// Build the switch row once, then keep it in sync with the server each poll.
+function renderToggles() {
+  const row = $("switches");
+  row.innerHTML = "";
+  for (const t of toggles) {
+    const label = document.createElement("label");
+    label.className = "switch";
+    label.title = t.hint || "";
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.id = "tg-" + t.id;
+    input.onchange = () => action(() => App.SetToggle(t.id, input.checked));
+    const knob = document.createElement("span");
+    const text = document.createElement("span");
+    text.className = "switch-label";
+    text.textContent = t.label;
+    label.append(input, knob, text);
+    if (t.admin) {
+      const pin = document.createElement("span");
+      pin.className = "pin";
+      pin.id = "pin-" + t.id;
+      pin.textContent = "📌";
+      pin.title = "Kept across presets and map changes";
+      label.append(pin);
+    }
+    row.append(label);
+  }
+}
+
 function syncToggles(st) {
-  for (const cvar of ["mp_friendlyfire", "mp_overtime_enable", "mp_autokick"]) {
-    const el = $("tg-" + cvar);
-    const value = st ? st[{ mp_friendlyfire: "friendlyFire", mp_overtime_enable: "overtime", mp_autokick: "autokick" }[cvar]] : -1;
-    el.disabled = !st || !st.connected || value < 0;
+  const sticky = (currentServer && currentServer.sticky) || {};
+  const stickyOn = !currentServer || currentServer.stickyAdmin !== false;
+  for (const t of toggles) {
+    const el = $("tg-" + t.id);
+    if (!el) continue;
+    const value = st && st.toggles ? st.toggles[t.id] : -1;
+    el.disabled = !st || !st.connected || value === undefined || value < 0;
     if (value >= 0) el.checked = value === 1;
+    const pin = $("pin-" + t.id);
+    if (pin) pin.classList.toggle("hidden", !(stickyOn && t.id in sticky));
   }
 }
 
@@ -299,6 +348,36 @@ function updatePauseButton() {
   $("btn-pause").textContent = paused ? "▶ Resume match" : "⏸ Pause match";
 }
 
+function warmupRunning() {
+  return warmupEndsAt !== null && warmupEndsAt > Date.now();
+}
+
+function updateWarmupButton() {
+  const btn = $("btn-warmup");
+  if (!warmupRunning()) {
+    warmupEndsAt = null;
+    btn.textContent = "▶ Start warmup";
+    return;
+  }
+  const left = Math.round((warmupEndsAt - Date.now()) / 1000);
+  const mmss = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}`;
+  btn.textContent = `⏹ End warmup · go live (${mmss})`;
+}
+
+async function toggleWarmup() {
+  if (warmupRunning()) {
+    const ok = await action(() => App.EndWarmup(), "Warmup ended — match is live");
+    if (ok !== undefined) warmupEndsAt = null;
+  } else {
+    if (!(await confirmIfBusy("Start warmup?", `${lastStatus.humans} player(s) are on the server. Starting warmup interrupts the running match.`)))
+      return;
+    const seconds = parseInt($("warmup-seconds").value, 10) || 120;
+    const ok = await action(() => App.StartWarmup(seconds), "Warmup started");
+    if (ok !== undefined) warmupEndsAt = Date.now() + seconds * 1000;
+  }
+  updateWarmupButton();
+}
+
 async function togglePause() {
   if (paused) {
     const ok = await action(() => App.Unpause(), "Match resumed");
@@ -328,7 +407,7 @@ function renderServerList() {
 function showServerFields() {
   const s = editCfg.servers[editIdx];
   const has = !!s;
-  for (const id of ["cfg-name", "cfg-host", "cfg-port", "cfg-password", "cfg-collection", "cfg-default"])
+  for (const id of ["cfg-name", "cfg-host", "cfg-port", "cfg-password", "cfg-collection", "cfg-default", "cfg-sticky"])
     $(id).disabled = !has;
   if (!has) return;
   $("cfg-name").value = s.name || "";
@@ -337,6 +416,7 @@ function showServerFields() {
   $("cfg-password").value = s.password || "";
   $("cfg-collection").value = s.collectionId || "";
   $("cfg-default").checked = s.name === editCfg.default;
+  $("cfg-sticky").checked = s.stickyAdmin !== false;
 }
 
 async function openSettings() {
@@ -451,6 +531,7 @@ function wireEvents() {
     else if (editCfg.default === editCfg.servers[editIdx].name) editCfg.default = "";
     renderServerList();
   };
+  $("cfg-sticky").onchange = () => (editCfg.servers[editIdx].stickyAdmin = $("cfg-sticky").checked);
 
   $("server-select").onchange = async () => {
     await call(() => App.SelectServer($("server-select").value));
@@ -459,6 +540,7 @@ function wireEvents() {
     selectedMode = null;
     lastStatus = null;
     paused = false;
+    warmupEndsAt = null;
     await refreshStatus();
     await refreshMaps();
   };
@@ -475,21 +557,12 @@ function wireEvents() {
   };
   $("btn-refreshmaps").onclick = refreshMaps;
 
-  $("btn-warmup-start").onclick = () =>
-    action(() => App.StartWarmup(parseInt($("warmup-seconds").value, 10) || 120), "Warmup started");
-  $("btn-warmup-end").onclick = async () => {
-    if (!(await confirmIfBusy("End warmup and go live?", "The match starts immediately for everyone on the server."))) return;
-    action(() => App.EndWarmup(), "Warmup ended — match is live");
-  };
+  $("btn-warmup").onclick = toggleWarmup;
   $("btn-pause").onclick = togglePause;
   $("btn-restart").onclick = async () => {
     if (!(await confirmAction("Restart the match?", "This resets the score to 0:0 and starts the match from round 1."))) return;
     action(() => App.RestartRound(), "Match restarted");
   };
-
-  for (const cvar of ["mp_friendlyfire", "mp_overtime_enable", "mp_autokick"]) {
-    $("tg-" + cvar).onchange = (e) => action(() => App.SetToggle(cvar, e.target.checked));
-  }
 
   const announce = () => {
     const msg = $("announce-in").value.trim();
@@ -541,9 +614,13 @@ async function init() {
   }
   App = window.go.main.App;
   presets = await App.GetPresets();
+  toggles = await App.GetToggles();
+  renderToggles();
   wireEvents();
   renderModeButtons();
   updatePauseButton();
+  updateWarmupButton();
+  setInterval(updateWarmupButton, 1000);
   await refreshServerSelect();
 
   const cfg = await App.GetConfig();

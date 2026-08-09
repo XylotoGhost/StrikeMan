@@ -5,7 +5,9 @@ package main
 // Linux Secret Service); the JSON file keeps one only if no keyring exists.
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -20,6 +22,14 @@ type Server struct {
 	Port         int    `json:"port"`
 	Password     string `json:"password,omitempty"` // keyring fallback only
 	CollectionID string `json:"collectionId"`
+	// Keep admin toggles across presets and map loads. Pointer so a config
+	// written before this existed defaults to on rather than off.
+	StickyAdmin *bool           `json:"stickyAdmin,omitempty"`
+	Sticky      map[string]bool `json:"sticky,omitempty"`
+}
+
+func (s *Server) StickyEnabled() bool {
+	return s.StickyAdmin == nil || *s.StickyAdmin
 }
 
 type Config struct {
@@ -36,14 +46,19 @@ func configPath() string {
 }
 
 // LoadConfig reads the config, migrates the old single-server format if
-// found, and fills in passwords from the keyring.
-func LoadConfig() Config {
+// found, and fills in passwords from the keyring. A parse error is returned
+// rather than swallowed, so a broken file is not mistaken for a first run.
+func LoadConfig() (Config, error) {
 	var cfg Config
 	data, err := os.ReadFile(configPath())
 	if err != nil {
-		return cfg
+		return cfg, nil // no config yet: first run
 	}
-	json.Unmarshal(data, &cfg)
+	// An editor may save the file with a UTF-8 BOM, which json rejects.
+	data = bytes.TrimPrefix(data, []byte{0xEF, 0xBB, 0xBF})
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		return cfg, fmt.Errorf("%s could not be read: %w", configPath(), err)
+	}
 
 	if len(cfg.Servers) == 0 { // v0.1 format: one server at the top level
 		var old Server
@@ -60,7 +75,7 @@ func LoadConfig() Config {
 			s.Password, _ = keyring.Get(keyringService, s.Name)
 		}
 	}
-	return cfg
+	return cfg, nil
 }
 
 // Save writes the config file and stores passwords in the keyring. Only when
