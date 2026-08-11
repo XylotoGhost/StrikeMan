@@ -20,7 +20,7 @@ export const api = {
 export const state = {
   presets: [],
   toggles: [],
-  maps: { official: [], wingman: [], wingmanOnly: [], workshop: [] },
+  maps: { official: [], workshop: [], modes: {} },
   status: null,
   server: null, // active server view: sticky flags, warmup length
 
@@ -85,21 +85,44 @@ export function warmupSecondsLeft() {
   return Math.floor((state.warmupEndsAt - Date.now()) / 1000);
 }
 
-/** Maps offered for the selected mode, already filtered. */
+/**
+ * What the server has shown about one map in the selected mode:
+ * true it plays it, false it does not, null nobody has tried.
+ */
+function modeSupport(ref, wingman) {
+  const entry = (state.maps.modes || {})[ref];
+  if (!entry) return null;
+  const value = wingman ? entry.wingman : entry.competitive;
+  return value === 0 ? null : value === 1;
+}
+
+/**
+ * Maps offered for the selected mode. Nothing is assumed from a built-in
+ * list: a map is dropped only once the server has shown it cannot play this
+ * mode, confirmed maps are listed first, and everything else is offered as
+ * untried rather than hidden — hiding a map that plays fine is the worse
+ * mistake, and trying it is what settles the question.
+ */
 export function visibleMaps() {
   const wingman = isWingmanIntent();
-  const official = state.maps.official.filter((name) =>
-    wingman
-      ? state.maps.wingman.includes(name)
-      : !state.maps.wingmanOnly.includes(name)
-  );
-  const workshop = state.maps.workshop.filter(
-    (m) =>
-      !wingman ||
-      !(m.tags || []).length ||
-      m.tags.some((tag) => tag.toLowerCase() === "wingman")
-  );
-  return { official, workshop, wingman };
+  const confirmed = [];
+  const untested = [];
+  for (const name of state.maps.official) {
+    const support = modeSupport(name, wingman);
+    if (support === false) continue;
+    (support === true ? confirmed : untested).push(name);
+  }
+
+  const workshop = state.maps.workshop.filter((m) => {
+    const support = modeSupport(m.id, wingman);
+    if (support !== null) return support;
+    if (!wingman) return true;
+    // Nothing observed yet, so fall back to the Steam tags. Whoever uploaded
+    // the map wrote those, so they are a hint and lose to any observation.
+    return !(m.tags || []).length || m.tags.some((tag) => tag.toLowerCase() === "wingman");
+  });
+
+  return { confirmed, untested, workshop, wingman };
 }
 
 // ---- Backend refreshes ----

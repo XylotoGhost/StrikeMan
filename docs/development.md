@@ -50,6 +50,11 @@ permanent: `servers_test.go` asserts that an export contains no password at
 all, that an imported file cannot smuggle one back in, and that malformed
 files are rejected rather than half-applied.
 
+`internal/rcon/timing_test.go` runs a fake CS2 that can answer late, dribble a
+packet body across the between-packets wait, or send an earlier command's
+output first. Each of those used to produce a *wrong answer with no error* —
+most visibly an empty map list — so they are worth a stand-in server.
+
 CI additionally runs `gofmt -l` and `go test -race`. The race detector needs
 cgo, which a bare Windows checkout usually lacks, so that is where the
 concurrency guarantees are actually checked — it matters because the status
@@ -83,6 +88,7 @@ internal/
     status.go          parsing `status`, convars, sticky admin toggles
     game.go            maps, presets, warmup, match, teams, bots
     presets.go         presets, switches and timings as data
+    mapmodes.go        which maps play which mode, learned from the server
     servers.go         server files (import/export) and the connection test
     selfupdate.go      the update buttons in the Server card
     window.go          window sizing

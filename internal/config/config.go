@@ -43,11 +43,23 @@ func (s *Server) StickyEnabled() bool {
 	return s.StickyAdmin == nil || *s.StickyAdmin
 }
 
+// MapModes records which game modes a map has been shown to support. Zero
+// means nothing is known yet, which is deliberately different from "no": a
+// map nobody has tried is still worth offering.
+type MapModes struct {
+	Competitive int `json:"competitive"` // -1 no, 0 unknown, 1 yes
+	Wingman     int `json:"wingman"`
+}
+
 type Config struct {
 	Servers []Server `json:"servers"`
 	Default string   `json:"default"`
 	// UI language: "en", "de", or "" to follow the operating system.
 	Language string `json:"language,omitempty"`
+	// What maps support, learned from the servers rather than kept in a list
+	// that goes stale whenever Valve adds a map. Keyed by official map name
+	// or workshop file id.
+	MapModes map[string]MapModes `json:"mapModes,omitempty"`
 }
 
 func configPath() string {

@@ -19,8 +19,7 @@ func TestPacketRoundTrip(t *testing.T) {
 		writePacket(client, 7, packetExec, "status")
 	}()
 
-	server.SetReadDeadline(time.Now().Add(2 * time.Second))
-	id, typ, body, err := readPacket(server)
+	id, typ, body, err := readPacket(server, 2*time.Second, 2*time.Second)
 	if err != nil {
 		t.Fatalf("readPacket: %v", err)
 	}
@@ -40,8 +39,7 @@ func TestReadPacketRejectsAbsurdSize(t *testing.T) {
 		binary.Write(client, binary.LittleEndian, int32(1<<30))
 	}()
 
-	server.SetReadDeadline(time.Now().Add(2 * time.Second))
-	if _, _, _, err := readPacket(server); err == nil {
+	if _, _, _, err := readPacket(server, 2*time.Second, 2*time.Second); err == nil {
 		t.Fatal("expected an error for an out-of-range packet size")
 	}
 }
@@ -60,8 +58,8 @@ func TestConnectWrongPasswordExplainsItself(t *testing.T) {
 		if err != nil {
 			return
 		}
-		readPacket(conn) // the auth attempt
-		conn.Close()     // ...and hang up, as CS2 does
+		readPacket(conn, 2*time.Second, 2*time.Second) // the auth attempt
+		conn.Close()                                   // ...and hang up, as CS2 does
 	}()
 
 	addr := listener.Addr().(*net.TCPAddr)

@@ -119,33 +119,35 @@ export function renderNowLine() {
 export function renderMapSelect() {
   const select = $("map-select");
   const previous = select.value;
-  const { official, workshop, wingman } = visibleMaps();
+  const { confirmed, untested, workshop, wingman } = visibleMaps();
   const current = state.status ? state.status.map : "";
 
   select.innerHTML = "";
-  $("map-filter-hint").textContent = wingman
-    ? t("game.filterWingman")
-    : t("game.filterCompetitive");
+  $("map-filter-hint").textContent = t(
+    wingman ? "game.filterWingman" : "game.filterCompetitive"
+  );
 
-  const officialGroup = document.createElement("optgroup");
-  officialGroup.label = t("game.groupOfficial");
-  for (const name of official) {
-    const label = name === current ? `${name}  ● ${t("game.mapCurrent")}` : name;
-    officialGroup.append(new Option(label, name));
-  }
-  select.append(officialGroup);
+  const addGroup = (label, options) => {
+    if (!options.length) return;
+    const group = document.createElement("optgroup");
+    group.label = label;
+    for (const [text, value] of options) group.append(new Option(text, value));
+    select.append(group);
+  };
+  const officialOption = (name) => [
+    name === current ? `${name}  ● ${t("game.mapCurrent")}` : name,
+    name,
+  ];
 
-  if (workshop.length) {
-    const workshopGroup = document.createElement("optgroup");
-    workshopGroup.label = t("game.groupWorkshop");
-    for (const map of workshop) {
-      workshopGroup.append(new Option(map.title, "ws:" + map.id));
-    }
-    select.append(workshopGroup);
-  }
+  addGroup(t("game.groupConfirmed"), confirmed.map(officialOption));
+  addGroup(t("game.groupUntested"), untested.map(officialOption));
+  addGroup(
+    t("game.groupWorkshop"),
+    workshop.map((map) => [map.title, "ws:" + map.id])
+  );
 
   // Keep the current map visible even when the filter would hide it.
-  if (current && !official.includes(current)) {
+  if (current && !confirmed.includes(current) && !untested.includes(current)) {
     select.append(new Option(`${current}  ● ${t("game.mapCurrent")}`, current));
   }
 

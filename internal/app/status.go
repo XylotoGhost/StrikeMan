@@ -213,6 +213,7 @@ func (a *App) GetStatus() Status {
 		a.mu.Unlock()
 	}
 
+	a.observeMapMode(st)
 	a.enforceSticky(st.Toggles)
 	return st
 }
@@ -291,7 +292,7 @@ func (a *App) enforceSticky(observed map[string]int) {
 			cmds, state = f.toggle.On, "state.on"
 		}
 		if err := a.execAll(cmds...); err == nil {
-			a.logKey("log.keptToggle", f.toggle.LabelKey, state)
+			a.logKey("log.keptToggle", tkey(f.toggle.LabelKey), tkey(state))
 		}
 	}
 }

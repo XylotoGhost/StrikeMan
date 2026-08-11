@@ -94,23 +94,8 @@ func presetByID(id string) *Preset {
 	return nil
 }
 
-// Official maps with wingman spawn support, and the subset that has *only*
-// wingman spawns. Verified by loading a map and looking at which intro
-// prefabs the server reports in `status`: de_inferno loads both team and
-// wingman intros, de_brewery only the wingman ones.
-var WingmanMaps = []string{
-	"de_brewery",
-	"de_dogtown",
-	"de_inferno",
-	"de_nuke",
-	"de_overpass",
-	"de_vertigo",
-}
-
-var WingmanOnlyMaps = []string{
-	"de_brewery",
-	"de_dogtown",
-}
+// Which maps play which mode is not a list here any more — it went stale
+// every time CS2 shipped maps. See mapmodes.go: the server is asked instead.
 
 // Toggle is a switch in the Match card. Match rules follow whichever preset
 // is applied; admin toggles can be kept sticky per server, because a map

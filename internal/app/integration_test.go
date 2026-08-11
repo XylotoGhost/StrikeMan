@@ -10,7 +10,6 @@ package app
 
 import (
 	"os"
-	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -87,9 +86,11 @@ func TestLivePresetApply(t *testing.T) {
 		t.Fatalf("seeding drift: %v", err)
 	}
 
+	// Stay on the current map when it is known to play wingman, otherwise
+	// fall back to one that has been seeded as such.
 	targetMap := before.Map
-	if !slices.Contains(WingmanMaps, targetMap) {
-		targetMap = "de_nuke"
+	if known, supported := supportsMode(app.mapModes(), targetMap, modeWingman); !known || !supported {
+		targetMap = "de_brewery"
 	}
 	if err := app.ApplyPreset("wingman", targetMap, false); err != nil {
 		t.Fatalf("ApplyPreset: %v", err)

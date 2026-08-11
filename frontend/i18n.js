@@ -33,11 +33,17 @@ const strings = {
     "game.changeMapOnly": "Change map only",
     "game.changeMapOnlyHint": "Load the map without changing the mode",
     "game.refreshMaps": "Reload map list",
-    "game.filterWingman": "Showing maps that support Wingman.",
-    "game.filterCompetitive": "Showing maps that support Competitive.",
+    "game.filterWingman":
+      "Maps the server has run in Wingman come first. Others are offered untried — only maps it has refused are hidden.",
+    "game.filterCompetitive":
+      "Maps the server has run in Competitive come first. Others are offered untried — only maps it has refused are hidden.",
     "game.mapCurrent": "current",
-    "game.groupOfficial": "Official",
+    "game.groupConfirmed": "Plays this mode",
+    "game.groupUntested": "Not tried yet",
     "game.groupWorkshop": "Workshop",
+
+    "mode.competitive": "Competitive",
+    "mode.wingman": "Wingman",
 
     "match.title": "Match",
     "match.warmup": "Warmup",
@@ -207,6 +213,11 @@ const strings = {
     "log.updateNoChecksum": "No checksum published for this release; skipping verification.",
     "log.serversExported": "Exported {0} server(s) to {1}",
     "log.serversImported": "Imported {0} server(s) from {1}",
+    "log.mapSupports": "Noted: {0} plays {1}.",
+    "log.mapDoesNotSupport": "Noted: {0} does not play {1}.",
+    "log.mapModeSaveFailed": "Could not remember what the map supports: {0}",
+    "log.noMapsParsed":
+      "The server answered `maps *` with {0} bytes but no map names — the map list is empty.",
 
     "error.noServer": "No server configured",
     "error.unknownServer": "Unknown server {0}",
@@ -259,11 +270,17 @@ const strings = {
     "game.changeMapOnly": "Nur Map wechseln",
     "game.changeMapOnlyHint": "Map laden, ohne den Modus zu ändern",
     "game.refreshMaps": "Map-Liste neu laden",
-    "game.filterWingman": "Zeigt Maps, die Wingman unterstützen.",
-    "game.filterCompetitive": "Zeigt Maps, die Competitive unterstützen.",
+    "game.filterWingman":
+      "Maps, die der Server schon in Wingman gefahren hat, stehen oben. Der Rest wird ungetestet angeboten — ausgeblendet wird nur, was der Server abgelehnt hat.",
+    "game.filterCompetitive":
+      "Maps, die der Server schon in Competitive gefahren hat, stehen oben. Der Rest wird ungetestet angeboten — ausgeblendet wird nur, was der Server abgelehnt hat.",
     "game.mapCurrent": "aktuell",
-    "game.groupOfficial": "Offiziell",
+    "game.groupConfirmed": "Spielt diesen Modus",
+    "game.groupUntested": "Noch nicht getestet",
     "game.groupWorkshop": "Workshop",
+
+    "mode.competitive": "Competitive",
+    "mode.wingman": "Wingman",
 
     "match.title": "Match",
     "match.warmup": "Aufwärmen",
@@ -437,6 +454,12 @@ const strings = {
       "Für dieses Release ist keine Prüfsumme veröffentlicht; Prüfung übersprungen.",
     "log.serversExported": "{0} Server nach {1} exportiert",
     "log.serversImported": "{0} Server aus {1} importiert",
+    "log.mapSupports": "Notiert: {0} spielt {1}.",
+    "log.mapDoesNotSupport": "Notiert: {0} spielt {1} nicht.",
+    "log.mapModeSaveFailed":
+      "Konnte nicht speichern, welche Modi die Map unterstützt: {0}",
+    "log.noMapsParsed":
+      "Der Server hat auf `maps *` {0} Bytes geantwortet, aber keine Map-Namen — die Map-Liste ist leer.",
 
     "error.noServer": "Kein Server konfiguriert",
     "error.unknownServer": "Unbekannter Server {0}",
@@ -489,6 +512,17 @@ export function getLanguage() {
   return current;
 }
 
+/**
+ * An argument can itself be a translation key: preset and toggle names travel
+ * from the backend as keys so they stay localised, tagged the same way its
+ * errors are. Without this they printed raw, as in "Preset
+ * preset.competitive.name fully applied".
+ */
+function resolveArg(arg) {
+  const value = String(arg);
+  return value.startsWith("i18n:") ? t(value.slice(5)) : value;
+}
+
 /** Translate a key, filling {0}, {1}, … from args. Falls back to English. */
 export function t(key, args = []) {
   const table = strings[current] || strings.en;
@@ -496,7 +530,7 @@ export function t(key, args = []) {
   if (text === undefined) text = strings.en[key];
   if (text === undefined) return key; // visible on purpose: a missing key
   return text.replace(/\{(\d+)\}/g, (match, i) =>
-    args[i] === undefined ? match : String(args[i])
+    args[i] === undefined ? match : resolveArg(args[i])
   );
 }
 

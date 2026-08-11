@@ -6,22 +6,23 @@ package app
 import (
 	"fmt"
 	"regexp"
-	"slices"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 
+	"strikeman/internal/config"
 	"strikeman/internal/steam"
 )
 
 // ---- Maps ----
 
 type MapList struct {
-	Official    []string            `json:"official"`
-	Wingman     []string            `json:"wingman"`
-	WingmanOnly []string            `json:"wingmanOnly"`
-	Workshop    []steam.WorkshopMap `json:"workshop"`
+	Official []string            `json:"official"`
+	Workshop []steam.WorkshopMap `json:"workshop"`
+	// What each map is known to support, keyed by official map name or
+	// workshop file id. A map missing here has simply not been played yet.
+	Modes map[string]config.MapModes `json:"modes"`
 }
 
 var reMapName = regexp.MustCompile(`^(ar|cs|de)_[a-z0-9_]+$`)
@@ -44,16 +45,20 @@ func officialMaps(out string) []string {
 // configured workshop collection.
 func (a *App) GetMaps() (MapList, error) {
 	list := MapList{
-		Official:    []string{},
-		Wingman:     WingmanMaps,
-		WingmanOnly: WingmanOnlyMaps,
-		Workshop:    []steam.WorkshopMap{},
+		Official: []string{},
+		Workshop: []steam.WorkshopMap{},
+		Modes:    a.mapModes(),
 	}
 	out, err := a.exec("maps *")
 	if err != nil {
 		return list, err
 	}
 	list.Official = officialMaps(out)
+	if len(list.Official) == 0 {
+		// The server answered but nothing in it looked like a map. Say so
+		// rather than presenting an empty dropdown with no explanation.
+		a.warnKey("log.noMapsParsed", strconv.Itoa(len(out)))
+	}
 
 	collectionID := ""
 	if s, ok := a.server(); ok {
@@ -75,9 +80,11 @@ func (a *App) GetMaps() (MapList, error) {
 	return list, nil
 }
 
-// wingmanSupport reports whether a workshop map can be ruled out for wingman
-// from its Steam tags. Untagged maps pass: the post-load check covers them.
-func wingmanSupport(maps []steam.WorkshopMap, id string) (title string, supported bool) {
+// taggedForWingman reports whether a workshop map's Steam tags rule it out.
+// Tags are written by whoever uploaded the map, so they are a hint, not
+// evidence: an untagged map passes, and anything we have actually observed
+// outranks them.
+func taggedForWingman(maps []steam.WorkshopMap, id string) (title string, allowed bool) {
 	for _, m := range maps {
 		if m.ID != id {
 			continue
@@ -90,21 +97,26 @@ func wingmanSupport(maps []steam.WorkshopMap, id string) (title string, supporte
 	return "", true
 }
 
-// checkWingmanMap refuses maps that are known not to support wingman.
+// checkWingmanMap refuses only maps the server has already shown cannot play
+// wingman. A map nobody has tried is allowed through — that attempt is how it
+// becomes known either way.
 func (a *App) checkWingmanMap(mapRef string, workshop bool) error {
-	if workshop {
-		a.mu.Lock()
-		known := a.workshop
-		a.mu.Unlock()
-		if title, ok := wingmanSupport(known, mapRef); !ok {
-			return tErr("error.workshopNotWingman", title)
+	if known, supported := supportsMode(a.mapModes(), mapRef, modeWingman); known {
+		if supported {
+			return nil
 		}
+		return tErr("error.mapNotWingman", mapRef)
+	}
+	if !workshop {
 		return nil
 	}
-	if slices.Contains(WingmanMaps, mapRef) {
-		return nil
+	a.mu.Lock()
+	cached := a.workshop
+	a.mu.Unlock()
+	if title, ok := taggedForWingman(cached, mapRef); !ok {
+		return tErr("error.workshopNotWingman", title)
 	}
-	return tErr("error.mapNotWingman", mapRef)
+	return nil
 }
 
 // ChangeMap loads an official map name or a workshop file ID.
@@ -112,7 +124,7 @@ func (a *App) ChangeMap(ref string, workshop bool) error {
 	if err := a.changeMap(ref, workshop); err != nil {
 		return err
 	}
-	go a.runAfterMapLoad(nil) // the new map resets sticky toggles and warmup
+	go a.runAfterMapLoad(nil, ref) // the new map resets sticky toggles and warmup
 	return nil
 }
 
@@ -149,7 +161,7 @@ func (a *App) ApplyPreset(id, mapRef string, workshop bool) error {
 			return err
 		}
 	}
-	a.logKey("log.applyingPreset", p.NameKey, mapRef)
+	a.logKey("log.applyingPreset", tkey(p.NameKey), mapRef)
 	for _, cmd := range p.Commands {
 		if _, err := a.exec(cmd); err != nil {
 			return err
@@ -158,7 +170,7 @@ func (a *App) ApplyPreset(id, mapRef string, workshop bool) error {
 	if err := a.changeMap(mapRef, workshop); err != nil {
 		return err
 	}
-	go a.runAfterMapLoad(p)
+	go a.runAfterMapLoad(p, mapRef)
 	return nil
 }
 
@@ -166,7 +178,7 @@ func (a *App) ApplyPreset(id, mapRef string, workshop bool) error {
 // then applies the preset's match rules and restarts warmup on our terms,
 // because loading a map re-runs the gamemode config and resets both. With a
 // nil preset it is a plain map change and only the warmup part applies.
-func (a *App) runAfterMapLoad(p *Preset) {
+func (a *App) runAfterMapLoad(p *Preset, mapRef string) {
 	time.Sleep(mapLoadFirstWait)
 	for i := 0; i < mapLoadMaxAttempts; i++ {
 		if _, err := a.exec("echo strikeman-ready"); err != nil {
@@ -189,11 +201,11 @@ func (a *App) runAfterMapLoad(p *Preset) {
 		if p == nil {
 			return
 		}
-		a.verifyMode(p)
+		a.verifyMode(p, mapRef)
 		return
 	}
 	if p != nil {
-		a.logKey("log.presetTimedOut", p.NameKey)
+		a.logKey("log.presetTimedOut", tkey(p.NameKey))
 	}
 }
 
@@ -214,18 +226,26 @@ func (a *App) restartWarmupAfterLoad() {
 	}
 }
 
-// verifyMode warns when the server silently fell back to another mode, which
-// happens on maps that do not support the one the preset asked for.
-func (a *App) verifyMode(p *Preset) {
+// verifyMode checks whether the mode the preset asked for actually took. A
+// server that quietly fell back is telling us the map cannot play that mode,
+// and a server that did not is telling us it can — either way the answer is
+// remembered, so the map lists get more accurate the more you play.
+func (a *App) verifyMode(p *Preset, mapRef string) {
 	out, err := a.exec("game_mode")
 	if err != nil {
 		return
 	}
-	if m := reGameMode.FindStringSubmatch(out); m != nil && m[1] != strconv.Itoa(p.ExpectedMode) {
-		a.warnKey("log.modeFellBack", p.NameKey, m[1])
+	m := reGameMode.FindStringSubmatch(out)
+	if m == nil {
 		return
 	}
-	a.logKey("log.presetApplied", p.NameKey)
+	if m[1] != strconv.Itoa(p.ExpectedMode) {
+		a.learnMapMode(mapRef, p.ExpectedMode, false)
+		a.warnKey("log.modeFellBack", tkey(p.NameKey), m[1])
+		return
+	}
+	a.learnMapMode(mapRef, p.ExpectedMode, true)
+	a.logKey("log.presetApplied", tkey(p.NameKey))
 }
 
 // ---- Warmup ----

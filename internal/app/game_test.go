@@ -29,45 +29,25 @@ func TestOfficialMapsFiltersNoise(t *testing.T) {
 	}
 }
 
-func TestWingmanMapClassification(t *testing.T) {
-	// de_brewery loads only the wingman intro prefabs; de_inferno loads both
-	// team and wingman intros; de_dust2 has no wingman spawns at all.
-	if !slices.Contains(WingmanMaps, "de_brewery") {
-		t.Error("de_brewery should support wingman")
-	}
-	if !slices.Contains(WingmanOnlyMaps, "de_brewery") {
-		t.Error("de_brewery should be wingman-only")
-	}
-	if !slices.Contains(WingmanMaps, "de_inferno") {
-		t.Error("de_inferno should support wingman")
-	}
-	if slices.Contains(WingmanOnlyMaps, "de_inferno") {
-		t.Error("de_inferno also supports competitive, so it is not wingman-only")
-	}
-	if slices.Contains(WingmanMaps, "de_dust2") {
-		t.Error("de_dust2 has no wingman support")
-	}
-}
-
-func TestWingmanSupportFromWorkshopTags(t *testing.T) {
+func TestTaggedForWingman(t *testing.T) {
 	maps := []steam.WorkshopMap{
 		{ID: "1", Title: "Cache Minecraft (port)", Tags: []string{"Classic", "Map"}},
 		{ID: "2", Title: "Some Wingman Map", Tags: []string{"Wingman", "Map"}},
 		{ID: "3", Title: "Untagged Map"},
 	}
 
-	if title, ok := wingmanSupport(maps, "1"); ok {
+	if title, ok := taggedForWingman(maps, "1"); ok {
 		t.Errorf("map tagged Classic only should be rejected (title %q)", title)
 	}
-	if _, ok := wingmanSupport(maps, "2"); !ok {
+	if _, ok := taggedForWingman(maps, "2"); !ok {
 		t.Error("map tagged Wingman should be accepted")
 	}
-	// Without tags we cannot tell, so it must pass and rely on the check
-	// performed once the map is loaded.
-	if _, ok := wingmanSupport(maps, "3"); !ok {
+	// Without tags we cannot tell, so it must pass: the attempt is what turns
+	// it into knowledge.
+	if _, ok := taggedForWingman(maps, "3"); !ok {
 		t.Error("untagged map should be allowed through")
 	}
-	if _, ok := wingmanSupport(maps, "unknown"); !ok {
+	if _, ok := taggedForWingman(maps, "unknown"); !ok {
 		t.Error("unknown map should be allowed through")
 	}
 }

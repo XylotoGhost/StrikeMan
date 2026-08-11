@@ -35,11 +35,25 @@ a private server. The one server-side difference is overtime.
 ### Maps
 
 Official maps come from the server's own `maps *` listing, so the list follows
-game updates. Wingman-only maps (`de_brewery`, `de_dogtown`) are hidden when
-you pick a competitive mode. Workshop maps come from a collection ID you set in
-settings and load through `host_workshop_map`; if a workshop map's Steam tags
-say it is not a wingman map, StrikeMan refuses before touching the server
-rather than letting it silently fall back to competitive.
+game updates. Workshop maps come from a collection ID you set in settings and
+load through `host_workshop_map`.
+
+Which of them play which mode is **learned from the server**, not kept in a
+list that goes stale every time CS2 ships a map:
+
+- **Plays this mode** — the server has actually run the map in it, either
+  because you applied a preset that stuck, or simply because it was running
+  that way when StrikeMan looked.
+- **Not tried yet** — nobody knows. Offered anyway: hiding a map that plays
+  fine is the worse mistake, and trying it is what settles the question.
+- Hidden — the server has been asked for this mode on that map and quietly
+  fell back to another, so it cannot play it.
+
+The lists therefore get more accurate the more you play, and a map added by a
+game update needs no update to StrikeMan. What it has worked out is kept in
+`mapModes` in the config file. Workshop tags are used only while nothing has
+been observed — the uploader writes them, so a map tagged "Wingman" that turns
+out not to play it is dropped after the first attempt.
 
 ## Match
 

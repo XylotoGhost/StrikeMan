@@ -2,9 +2,8 @@ export namespace app {
 	
 	export class MapList {
 	    official: string[];
-	    wingman: string[];
-	    wingmanOnly: string[];
 	    workshop: steam.WorkshopMap[];
+	    modes: Record<string, config.MapModes>;
 	
 	    static createFrom(source: any = {}) {
 	        return new MapList(source);
@@ -13,9 +12,8 @@ export namespace app {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.official = source["official"];
-	        this.wingman = source["wingman"];
-	        this.wingmanOnly = source["wingmanOnly"];
 	        this.workshop = this.convertValues(source["workshop"], steam.WorkshopMap);
+	        this.modes = this.convertValues(source["modes"], config.MapModes, true);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -245,6 +243,20 @@ export namespace app {
 
 export namespace config {
 	
+	export class MapModes {
+	    competitive: number;
+	    wingman: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new MapModes(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.competitive = source["competitive"];
+	        this.wingman = source["wingman"];
+	    }
+	}
 	export class Server {
 	    name: string;
 	    host: string;
@@ -275,6 +287,7 @@ export namespace config {
 	    servers: Server[];
 	    default: string;
 	    language?: string;
+	    mapModes?: Record<string, MapModes>;
 	
 	    static createFrom(source: any = {}) {
 	        return new Config(source);
@@ -285,6 +298,7 @@ export namespace config {
 	        this.servers = this.convertValues(source["servers"], Server);
 	        this.default = source["default"];
 	        this.language = source["language"];
+	        this.mapModes = this.convertValues(source["mapModes"], MapModes, true);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -305,6 +319,7 @@ export namespace config {
 		    return a;
 		}
 	}
+	
 
 }
 

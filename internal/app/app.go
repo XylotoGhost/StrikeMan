@@ -136,6 +136,11 @@ type localized struct {
 	Args []string `json:"args"`
 }
 
+// tkey marks a log argument that is itself a translation key — preset and
+// toggle names travel as keys so they stay localised. Without the marker the
+// frontend printed the key: "Preset preset.competitive.name fully applied".
+func tkey(key string) string { return "i18n:" + key }
+
 // tErr builds an error the frontend translates. Errors cross the Wails
 // boundary as plain strings, so the key and its arguments are encoded into
 // one; see translateError() in the frontend.
